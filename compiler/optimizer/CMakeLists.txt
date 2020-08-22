@@ -104,5 +104,6 @@ compiler_library(optimizer
 	${CMAKE_CURRENT_LIST_DIR}/FEInliner.cpp
 	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/AbsValue.cpp
 	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/AbsOpStack.cpp
-	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/AbsOpArray.cpp
+	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/AbsLocalVarArray.cpp
+	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/AbsState.cpp
 )

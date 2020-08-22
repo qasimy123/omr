@@ -1,3 +1,4 @@
+
 /*******************************************************************************
  * Copyright (c) 2020, 2020 IBM Corp. and others
  *
@@ -19,72 +20,63 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#ifndef ABS_OP_STACK_INCL
-#define ABS_OP_STACK_INCL
 
-#include "env/Region.hpp"
+#ifndef ABS_LOCAL_VAR_ARRAY_INCL
+#define ABS_LOCAL_VAR_ARRAY_INCL
+
 #include "infra/deque.hpp"
+#include "env/Region.hpp"
 #include "optimizer/ValuePropagation.hpp"
 #include "optimizer/abstractinterpreter/AbsValue.hpp"
 
 /**
-.* Operand Stack simulation.
+.* Local Variable Array Simulation.
  */
-class AbsOpStack
+class AbsLocalVarArray
    {
    public:
-   AbsOpStack(TR::Region& region);
-   AbsOpStack(AbsOpStack&, TR::Region& region);
+   AbsLocalVarArray(TR::Region &region);
+   AbsLocalVarArray(AbsLocalVarArray&, TR::Region& region);
 
    /**
-    * @brief Merge with another AbsOpStack. This is in-place merge.
+    * @brief Merge with another AbsLocalVarArray. This is in-place merge.
     *
-    * @param other AbsOpStack&
+    * @param other AbsLocalVarArray&
     * @param vp OMR::ValuePropagation* 
     * @return void
     */
-   void merge(AbsOpStack& other, OMR::ValuePropagation* vp);
+   void merge(AbsLocalVarArray& other, OMR::ValuePropagation* vp);
+   
+   /**
+    * @brief Get the AbsValue at index i
+    *
+    * @param i int32_t
+    * @return AbsValue*
+    */
+   AbsValue *at(int32_t i);
 
    /**
-    * @brief Push an AbsValue to the AbsOpStack.
-    * Note: AbsValue must be non-NULL.
+    * @brief Set the AbsValue at index i
     *
+    * @param i int32_t
     * @param value AbsValue*
     * @return void
     */
-   void push(AbsValue* value) { TR_ASSERT_FATAL(value, "Push a NULL value"); _stack.push_back(value); }
+   void set(int32_t i, AbsValue* value);
 
    /**
-    * @brief Get the value on the top of the AbsOpStack.
-    *
-    * @return AbsValue*
-    */
-   AbsValue* top() { TR_ASSERT_FATAL(size() > 0, "Top an empty stack!"); return _stack.back(); }
-
-   /**
-    * @brief Get and pop the value on the top of the AbsOpStack.
-    *
-    * @return AbsValue*
-    */
-   AbsValue* pop();
-
-   /**
-    * @brief Set the constraints of all AbsValues in the AbsOpStack to unknown.
+    * @brief Set the constraints of all AbsValues in the local var array to unknown.
     *
     * @return void
     */
    void setToTop();
 
-   bool empty()  { return _stack.empty(); }
-   size_t size()  { return _stack.size(); }
-  
+   size_t size() { return _array.size(); }
    void print(TR::Compilation* comp, OMR::ValuePropagation *vp);
 
    private:
-   typedef TR::deque<AbsValue*, TR::Region&> AbsValueStack;
-   
-   AbsValueStack _stack; 
+   typedef TR::deque<AbsValue*, TR::Region&> AbsValueArray;
+   AbsValueArray _array;
    };
 
 #endif
-

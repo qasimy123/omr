@@ -21,61 +21,65 @@
 
 #include "optimizer/abstractinterpreter/AbsOpStack.hpp"
 
-TR::AbsOpStack* TR::AbsOpStack::clone(TR::Region &region) const
+AbsOpStack::AbsOpStack(TR::Region &region) :
+      _stack(region)
    {
-   TR::AbsOpStack* copy = new (region) TR::AbsOpStack(region);
-   for (size_t i = 0; i < _container.size(); i ++)
-      {
-      copy->_container.push_back(_container[i] ? _container[i]->clone(region) : NULL);
-      }
-   return copy;
    }
 
-TR::AbsValue* TR::AbsOpStack::pop()
+AbsOpStack::AbsOpStack(AbsOpStack &other, TR::Region &region) :
+      _stack(region)
+   {
+   for (size_t i = 0; i < other.size(); i ++)
+      push(AbsValue::create(other._stack.at(i), region));  
+   }
+
+AbsValue* AbsOpStack::pop()
    {
    TR_ASSERT_FATAL(size() > 0, "Pop an empty stack!");
-   TR::AbsValue *value = _container.back();
-   _container.pop_back();
+   AbsValue *value = _stack.back();
+   _stack.pop_back();
    return value;
    }
 
-void TR::AbsOpStack::merge(const TR::AbsOpStack* other, TR::Region& region)
+void AbsOpStack::merge(AbsOpStack &other, OMR::ValuePropagation *vp)
    {
-   TR_ASSERT_FATAL(other->_container.size() == _container.size(), "Stacks have different sizes! other: %d vs self: %d", other->_container.size(), _container.size());
+   TR_ASSERT_FATAL(other._stack.size() == _stack.size(), "Stacks have different sizes!");
 
-   for (size_t i = 0; i < _container.size(); i ++)
+   size_t size = _stack.size();
+
+   for (size_t i = 0; i < size; i ++)
+      _stack.at(i)->merge(other._stack.at(i), vp);
+   }
+
+void AbsOpStack::setToTop()
+   {
+   size_t size = _stack.size();
+   for (size_t i = 0; i < size; i ++)
       {
-      if (_container[i] == NULL)
-         _container[i] = other->_container[i]->clone(region);
-      else
-         _container[i]->merge(other->_container[i]);
+      _stack.at(i)->setToTop();
       }
    }
 
-void TR::AbsOpStack::print(TR::Compilation* comp) const
+void AbsOpStack::print(TR::Compilation* comp, OMR::ValuePropagation *vp)
    {
    traceMsg(comp, "Contents of Abstract Operand Stack:\n");
-   
-   const size_t stackSize = size();
-
+   int32_t stackSize = size();
    if (stackSize == 0)
       {
-      traceMsg(comp, "<empty>\n\n");
+      traceMsg(comp, "<empty>\n");
+      traceMsg(comp, "\n");
       return;
       }
    
    traceMsg(comp, "<top>\n");
-
-   for (size_t i = 0; i < stackSize; i++) 
+   for (int32_t i = 0; i < stackSize; i++) 
       {
-      TR::AbsValue *value = _container[stackSize - i -1 ];
+      AbsValue *value = _stack.at(stackSize - i -1 );
       traceMsg(comp, "S[%d] = ", stackSize - i - 1);
       if (value)
-         value->print(comp);
-      else 
-         traceMsg(comp, "Uninitialized");
+         value->print(comp, vp);
       traceMsg(comp, "\n");
       }
-
-   traceMsg(comp, "<bottom>\n\n");
+   traceMsg(comp, "<bottom>\n");
+   traceMsg(comp, "\n");
    }
