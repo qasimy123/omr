@@ -102,6 +102,7 @@ compiler_library(optimizer
 	${CMAKE_CURRENT_LIST_DIR}/ValuePropagationCommon.cpp
 	${CMAKE_CURRENT_LIST_DIR}/TrivialDeadBlockRemover.cpp
 	${CMAKE_CURRENT_LIST_DIR}/FEInliner.cpp
+	${CMAKE_CURRENT_LIST_DIR}/BenefitInliner.cpp
 	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/AbsValue.cpp
 	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/AbsOpStack.cpp
 	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/AbsLocalVarArray.cpp
@@ -110,4 +111,5 @@ compiler_library(optimizer
 	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/IDTNode.cpp
 	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/InliningMethodSummary.cpp
 	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/OMRIDTBuilder.cpp
+	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/InliningProposal.cpp
 )
