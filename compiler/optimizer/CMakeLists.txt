@@ -105,9 +105,7 @@ compiler_library(optimizer
 	${CMAKE_CURRENT_LIST_DIR}/FEInliner.cpp
 	${CMAKE_CURRENT_LIST_DIR}/BenefitInliner.cpp
 	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/AbsValue.cpp
-	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/AbsOpStack.cpp
-	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/AbsLocalVarArray.cpp
-	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/AbsState.cpp
+	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/AbsStackMachineState.cpp
 	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/IDT.cpp
 	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/IDTNode.cpp
 	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/InliningMethodSummary.cpp

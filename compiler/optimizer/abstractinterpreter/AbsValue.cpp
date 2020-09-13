@@ -22,11 +22,10 @@
 #include "optimizer/abstractinterpreter/AbsValue.hpp"
 
 
-AbsValue::AbsValue(TR::VPConstraint* constraint, TR::DataType dataType, bool isDummy) :
+AbsValue::AbsValue(TR::VPConstraint* constraint, TR::DataType dataType) :
       _constraint(constraint),
       _dataType(dataType),
       _paramPos(-1),
-      _isDummy(isDummy),
       _isImplicitParameter(false)
    {
    }
@@ -35,45 +34,44 @@ AbsValue::AbsValue(AbsValue* other):
       _constraint(other->_constraint),
       _dataType(other->_dataType),
       _paramPos(other->_paramPos),
-      _isDummy(other->_isDummy),
       _isImplicitParameter(other->_isImplicitParameter)
    {
    }
 
-AbsValue* AbsValue::create(TR::VPConstraint *constraint, TR::DataType dataType, TR::Region& region)
+AbsValue* AbsValue::create(TR::Region& region, TR::VPConstraint *constraint, TR::DataType dataType)
    {
    return new (region) AbsValue(constraint, dataType);
    }
 
-AbsValue* AbsValue::create(AbsValue* other, TR::Region& region)
+AbsValue* AbsValue::create(TR::Region& region, AbsValue* other)
    {
    return new (region) AbsValue(other);
    }
 
-AbsValue* AbsValue::createClassObject(TR_OpaqueClassBlock* opaqueClass, bool mustBeNonNull, TR::Region& region, OMR::ValuePropagation* vp)
+AbsValue* AbsValue::createClassObject(TR::Region& region, TR::ValuePropagation* vp, TR_OpaqueClassBlock* opaqueClass, bool mustBeNonNull)
    { 
    TR::VPClassPresence *classPresence = mustBeNonNull? TR::VPNonNullObject::create(vp) : NULL;
 
    if (opaqueClass != NULL)
       {
       TR::VPClassType *classType =  TR::VPResolvedClass::create(vp, opaqueClass);
-      return AbsValue::create(TR::VPClass::create(vp, classType, classPresence, NULL, NULL, NULL), TR::Address, region);
+      return AbsValue::create(region, TR::VPClass::create(vp, classType, classPresence, NULL, NULL, NULL), TR::Address);
       }
 
-   return AbsValue::create(TR::VPClass::create(vp, NULL, classPresence, NULL, NULL, NULL), TR::Address, region);
+   return AbsValue::create(region, TR::VPClass::create(vp, NULL, classPresence, NULL, NULL, NULL), TR::Address);
    }
 
-AbsValue* AbsValue::createNullObject(TR::Region& region, OMR::ValuePropagation* vp)
+AbsValue* AbsValue::createNullObject(TR::Region& region, TR::ValuePropagation* vp)
    {
-   return AbsValue::create(TR::VPNullObject::create(vp), TR::Address, region);
+   return AbsValue::create(region, TR::VPNullObject::create(vp), TR::Address);
    }
 
-AbsValue* AbsValue::createStringConst(TR::SymbolReference* symRef, TR::Region& region, OMR::ValuePropagation* vp)
+AbsValue* AbsValue::createStringObject(TR::Region& region, TR::ValuePropagation* vp, TR::SymbolReference* symRef)
    {
-   return AbsValue::create(TR::VPConstString::create(vp, symRef), TR::Address, region);
+   return AbsValue::create(region, TR::VPConstString::create(vp, symRef), TR::Address);
    }
 
-AbsValue* AbsValue::createArrayObject(TR_OpaqueClassBlock* arrayClass, bool mustBeNonNull, int32_t lengthLow, int32_t lengthHigh, int32_t elementSize, TR::Region& region, OMR::ValuePropagation* vp)
+AbsValue* AbsValue::createArrayObject(TR::Region& region, TR::ValuePropagation* vp, TR_OpaqueClassBlock* arrayClass, bool mustBeNonNull, int32_t lengthLow, int32_t lengthHigh, int32_t elementSize)
    {
    TR::VPClassPresence *classPresence = mustBeNonNull? TR::VPNonNullObject::create(vp) : NULL;;
    TR::VPArrayInfo *arrayInfo = TR::VPArrayInfo::create(vp, lengthLow, lengthHigh, elementSize);
@@ -81,78 +79,63 @@ AbsValue* AbsValue::createArrayObject(TR_OpaqueClassBlock* arrayClass, bool must
    if (arrayClass)
       {
       TR::VPClassType *arrayType = TR::VPResolvedClass::create(vp, arrayClass);
-      return AbsValue::create(TR::VPClass::create(vp, arrayType, classPresence, NULL, arrayInfo, NULL), TR::Address, region);
+      return AbsValue::create(region, TR::VPClass::create(vp, arrayType, classPresence, NULL, arrayInfo, NULL), TR::Address);
       }
 
-   return AbsValue::create(TR::VPClass::create(vp, NULL, classPresence, NULL, arrayInfo, NULL), TR::Address, region);      
+   return AbsValue::create(region, TR::VPClass::create(vp, NULL, classPresence, NULL, arrayInfo, NULL), TR::Address);      
    }
 
-AbsValue* AbsValue::createIntConst(int32_t value, TR::Region& region, OMR::ValuePropagation* vp)
+AbsValue* AbsValue::createIntConst(TR::Region& region, TR::ValuePropagation* vp, int32_t value)
    {
-   return AbsValue::create(TR::VPIntConst::create(vp, value), TR::Int32, region);
+   return AbsValue::create(region, TR::VPIntConst::create(vp, value), TR::Int32);
    }
 
- AbsValue* AbsValue::createLongConst(int64_t value, TR::Region& region, OMR::ValuePropagation* vp)
+ AbsValue* AbsValue::createLongConst(TR::Region& region, TR::ValuePropagation* vp, int64_t value)
    {
-   return AbsValue::create(TR::VPLongConst::create(vp, value), TR::Int64, region);
+   return AbsValue::create(region, TR::VPLongConst::create(vp, value), TR::Int64);
    }
 
-AbsValue* AbsValue::createIntRange(int32_t low, int32_t high, TR::Region& region, OMR::ValuePropagation* vp)
+AbsValue* AbsValue::createIntRange(TR::Region& region, TR::ValuePropagation* vp, int32_t low, int32_t high)
    {
-   return AbsValue::create(TR::VPIntRange::create(vp, low, high), TR::Int32, region);
+   return AbsValue::create(region, TR::VPIntRange::create(vp, low, high), TR::Int32);
    }
 
-AbsValue* AbsValue::createLongRange(int64_t low, int64_t high, TR::Region& region, OMR::ValuePropagation* vp)
+AbsValue* AbsValue::createLongRange(TR::Region& region, TR::ValuePropagation* vp, int64_t low, int64_t high)
    {
-   return AbsValue::create(TR::VPLongRange::create(vp, low, high), TR::Int64, region);  
+   return AbsValue::create(region, TR::VPLongRange::create(vp, low, high), TR::Int64);  
    }
 
 AbsValue* AbsValue::createTopInt(TR::Region& region)
    {
-   return AbsValue::create(NULL, TR::Int32, region);
+   return AbsValue::create(region, NULL, TR::Int32);
    }
 
 AbsValue* AbsValue::createTopLong(TR::Region& region)
    {
-   return AbsValue::create(NULL, TR::Int64, region);
+   return AbsValue::create(region, NULL, TR::Int64);
    }
 
 AbsValue* AbsValue::createTopObject(TR::Region& region)
    {
-   return AbsValue::create(NULL, TR::Address, region);
+   return AbsValue::create(region, NULL, TR::Address);
    }
 
 AbsValue* AbsValue::createTopFloat(TR::Region& region)
    {
-   return AbsValue::create(NULL, TR::Float, region);
+   return AbsValue::create(region, NULL, TR::Float);
    }
 
 AbsValue* AbsValue::createTopDouble(TR::Region& region)
    {
-   return AbsValue::create(NULL, TR::Double, region);
+   return AbsValue::create(region, NULL, TR::Double);
    }
 
-AbsValue* AbsValue::createDummyLong(TR::Region& region)
-   {
-   return new (region) AbsValue(NULL, TR::Int64, true);
-   }
-
-AbsValue* AbsValue::createDummyDouble(TR::Region& region)
-   {
-   return new (region) AbsValue(NULL, TR::Double, true);
-   }
-
-AbsValue* AbsValue::merge(AbsValue *other, OMR::ValuePropagation *vp)
+AbsValue* AbsValue::merge(AbsValue *other, TR::ValuePropagation *vp)
    {
    TR_ASSERT_FATAL(other, "Cannot merge with a NULL AbsValue");
 
-   if (other->_dataType != _dataType) //when merging with a different DataType.
-      return NULL;
-
-   if (other->_isDummy && _isDummy) //Both dummy
-      return this;
-   
-   if (other->_isDummy || _isDummy) //merging dummy and non-dummy
+   //when merging with a different DataTypes
+   if (other->_dataType != _dataType) 
       return NULL;
 
    if (!_constraint)
@@ -181,14 +164,9 @@ AbsValue* AbsValue::merge(AbsValue *other, OMR::ValuePropagation *vp)
    return this;
    }
 
-void AbsValue::print(TR::Compilation* comp, OMR::ValuePropagation *vp)    
+void AbsValue::print(TR::Compilation* comp, TR::ValuePropagation *vp)    
    {
    traceMsg(comp, "AbsValue: Type: %s ", TR::DataType::getName(_dataType));
-
-   if (_isDummy)
-      {
-      traceMsg(comp, "DUMMY");
-      }
    
    if (_constraint)
       {
