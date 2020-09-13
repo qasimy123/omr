@@ -19,90 +19,37 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-
 #ifndef ABS_STATE_INCL
 #define ABS_STATE_INCL
 
+#include "infra/deque.hpp"
 #include "env/Region.hpp"
-#include "optimizer/abstractinterpreter/AbsLocalVarArray.hpp"
-#include "optimizer/abstractinterpreter/AbsOpStack.hpp"
 #include "optimizer/abstractinterpreter/AbsValue.hpp"
 
 /**
- * For holding abstract arguments passed from caller method to callee method during Abstract Interpretation.
+ * Abstract representation of the program state.
  */
-typedef TR::deque<AbsValue*, TR::Region&> AbsArguments;
-
 class AbsState
-    {
-    public:
-    AbsState(TR::Region &region);
-    AbsState(AbsState* other, TR::Region& region);
+   {
+   };
 
-    /**
-     * @brief Set an AbsValue at index i of the local variable array in this AbsState.
-     *
-     * @param i int32_t
-     * @param value AbsValue*
-     * @return void
-     */
-    void set(int32_t i, AbsValue* value) { _array.set(i, value); }
+/**
+ * Abstract representation of the the arguments.
+ * This is used for method invocation to pass arguments from caller to callee method during abstract interpretation.
+ */
+class AbsArguments
+   {
+   public:
+   AbsArguments(uint32_t size, TR::Region& region) {_args = new (region) AbsValue*[size]; _size = size; }
 
-    /**
-     * @brief Get the AbsValue at index i of the local variable array in this AbsState.
-     *
-     * @param i int32_t
-     * @return AbsValue*
-     */
-    AbsValue *at(int32_t i) { return _array.at(i); }
+   void set(uint32_t i, AbsValue* arg) { TR_ASSERT_FATAL(i < _size, "Index out of range"); _args[i] = arg; }
+   AbsValue* at(uint32_t i) { TR_ASSERT_FATAL(i < _size, "Index out of range"); return _args[i]; }
 
-    /**
-     * @brief Push an AbsValue to the operand stack in this AbsState.
-     *
-     * @param value AbsValue*
-     * @return void
-     */
-    void push(AbsValue* value) { _stack.push(value); }
-
-    /**
-     * @brief Get and pop the AbsValue at the top of the operand stack in this AbsState.
-     * 
-     * @return AbsValue*
-     */
-    AbsValue* pop() { return _stack.pop(); }
-
-    /**
-     * @brief Get the AbsValue at the top of the operand stack in this AbsState.
-     *
-     * @return AbsValue*
-     */
-    AbsValue* top() { return _stack.top();  }
-
-    /**
-     * @brief Merge with another AbsState. This is in-place merge.
-     *
-     * @param other AbsValue*
-     * @param vp OMR::ValuePropagation*
-     * @return void
-     */
-    void merge(AbsState* other, OMR::ValuePropagation* vp);
-    
-    /**
-     * @brief Set the constraints of all AbsValues in this state to unknown.
-     *
-     * @return void
-     */
-    void setToTop() { _stack.setToTop(); _array.setToTop(); }
-
-    size_t getStackSize() {  return _stack.size();  }
-    size_t getArraySize() {  return _array.size();  }
-    
-    void print(TR::Compilation* comp, OMR::ValuePropagation*vp);
-
-    private:
-    AbsLocalVarArray _array;
-    AbsOpStack _stack;
-    };
-
+   uint32_t size() { return _size; }
+   
+   private:
+   uint32_t _size;
+   AbsValue** _args;
+   };
 
 #endif
