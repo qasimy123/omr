@@ -27,85 +27,76 @@
 #include "optimizer/ValuePropagation.hpp"
 
 /**
- * AbsValue is the basic unit used to perform abstract interpretation.
+ * AbsValue is the abstract representation of a 'value'.
+ * It is the basic unit used to perform abstract interpretation.
  */
 class AbsValue
    {
    public:
-   AbsValue(TR::VPConstraint *constraint, TR::DataType dataType, bool isDummy=false);
+   explicit AbsValue(TR::VPConstraint *constraint, TR::DataType dataType);
+
+   /**
+    * @brief Copy constructor
+    */
    AbsValue(AbsValue* other);
 
    /**
     * @brief Merge with another AbsValue. 
-    * Note: This is in-place merge. 
-    * Other should have the exactly SAME dataType as self. 
-    * Any type promotion, such as Int16 => Int32 should be handled outside before calling merge() since this is not handled inside this method.
+    * @note This is an in-place merge. Other should have the exactly same dataType as self. 
     *
-    * @param other AbsValue*
-    * @param vp OMR::ValuePropagation* 
-    * @return AbsValue*
-    * 
-    * The return value is self or NULL.
-    * When succeeding to merge, it returns self.
-    * NULL denotes the merge fails (when merging with different dataTypes or merging with a Dummy AbsValue).
+    * @param other Another AbsValue to be merged with
+    * @param vp Value propagation 
+    * @return NULL if failing to merge. Self if succeding to merge.
     */
-   AbsValue* merge(AbsValue *other, OMR::ValuePropagation *vp);
+   AbsValue* merge(AbsValue *other, TR::ValuePropagation *vp);
 
    /**
-    * @brief Check whether the AbsValue has no constraint
+    * @brief Check whether the AbsValue is least precise abstract value.
+    * @note Top denotes the least precise representation in lattice theory.
     *
-    * @return bool
+    * @return true if it is top. false otherwise
     */
    bool isTop() { return _constraint == NULL; }
 
    /**
-    * @brief Set the constriant to unknown.
-    *
-    * @return void
+    * @brief Set to the least precise abstract value.
     */
    void setToTop() { _constraint = NULL; }
 
    /**
-    * @brief Check if the AbsValue is only used to take a slot as the second word of the 64-bit data types
-    *
-    * @return bool
-    */
-   bool isDummy() { return _isDummy; }
-
-   /**
     * @brief Check if the AbsValue is a parameter.
     *
-    * @return bool
+    * @return true if it is a pramater. false if not.
     */
    bool isParameter() { return _paramPos >= 0; }
 
    /**
     * @brief Check if the AbsValue is 'this' (the implicit parameter.)
     *
-    * @return bool
+    * @return true if it is the implicit parameter. false otherwise.
     */   
    bool isImplicitParameter() { return _paramPos == 0 && _isImplicitParameter; }
 
    /**
     * A set of methods for creating different kinds of AbsValue.
-    * OMR::ValuePropagation is required as a parameter since we are using TR::VPConstraint as the constraint.
+    * TR::ValuePropagation is required as a parameter since we are using TR::VPConstraint as the lattice.
     * Though it has nothing to do with the Value Propagation optimization.
     */
-   static AbsValue* create(TR::VPConstraint *constraint, TR::DataType dataType, TR::Region& region);
+   static AbsValue* create(TR::Region&region, TR::VPConstraint *constraint, TR::DataType dataType);
 
-   static AbsValue* create(AbsValue* other, TR::Region& region);
+   static AbsValue* create(TR::Region& region, AbsValue* other);
    
-   static AbsValue* createClassObject(TR_OpaqueClassBlock* opaqueClass, bool mustBeNonNull, TR::Region& region, OMR::ValuePropagation* vp);
+   static AbsValue* createClassObject(TR::Region& region, TR::ValuePropagation* vp, TR_OpaqueClassBlock* opaqueClass, bool mustBeNonNull);
 
-   static AbsValue* createNullObject(TR::Region& region, OMR::ValuePropagation* vp);
-   static AbsValue* createArrayObject(TR_OpaqueClassBlock* arrayClass, bool mustBeNonNull, int32_t lengthLow, int32_t lengthHigh, int32_t elementSize, TR::Region& region, OMR::ValuePropagation* vp);
+   static AbsValue* createNullObject(TR::Region& region, TR::ValuePropagation* vp);
+   static AbsValue* createArrayObject(TR::Region& region, TR::ValuePropagation* vp, TR_OpaqueClassBlock* arrayClass, bool mustBeNonNull, int32_t lengthLow, int32_t lengthHigh, int32_t elementSize);
    
-   static AbsValue* createStringConst(TR::SymbolReference* symRef, TR::Region& region, OMR::ValuePropagation* vp);
+   static AbsValue* createStringObject(TR::Region& region, TR::ValuePropagation* vp, TR::SymbolReference* symRef);
 
-   static AbsValue* createIntConst(int32_t value, TR::Region& region, OMR::ValuePropagation* vp);
-   static AbsValue* createLongConst(int64_t value, TR::Region& region, OMR::ValuePropagation* vp);
-   static AbsValue* createIntRange(int32_t low, int32_t high, TR::Region& region, OMR::ValuePropagation* vp);
-   static AbsValue* createLongRange(int64_t low, int64_t high, TR::Region& region, OMR::ValuePropagation* vp);
+   static AbsValue* createIntConst(TR::Region& region, TR::ValuePropagation* vp, int32_t value);
+   static AbsValue* createLongConst(TR::Region& region, TR::ValuePropagation* vp, int64_t value);
+   static AbsValue* createIntRange(TR::Region& region, TR::ValuePropagation* vp, int32_t low, int32_t high);
+   static AbsValue* createLongRange(TR::Region& region, TR::ValuePropagation* vp, int64_t low, int64_t high);
 
    static AbsValue* createTopInt(TR::Region& region);
    static AbsValue* createTopLong(TR::Region& region);
@@ -115,16 +106,13 @@ class AbsValue
    static AbsValue* createTopDouble(TR::Region& region);
    static AbsValue* createTopFloat(TR::Region& region);
 
-   static AbsValue* createDummyDouble(TR::Region& region);
-   static AbsValue* createDummyLong(TR::Region& region);
-
    bool isNullObject() { return _constraint && _constraint->isNullObject(); }
    bool isNonNullObject() { return _constraint && _constraint->isNonNullObject(); }
 
    bool isArrayObject() { return _constraint && _constraint->asClass() && _constraint->getArrayInfo(); }
    bool isClassObject() { return _constraint && _constraint->asClass() && !_constraint->getArrayInfo(); }
-   bool isStringConst() { return _constraint && _constraint->asConstString(); }
-   bool isObject() { return _constraint && (_constraint->asClass() || _constraint->asConstString()); }
+   bool isStringObject() { return _constraint && _constraint->asConstString(); }
+   bool isObject() { return isArrayObject() || isClassObject() || isStringObject(); }
 
    bool isIntConst() { return _constraint && _constraint->asIntConst(); }
    bool isIntRange() { return _constraint && _constraint->asIntRange(); }
@@ -134,10 +122,8 @@ class AbsValue
    bool isLongRange() { return _constraint && _constraint->asLongRange(); }
    bool isLong() { return _constraint && _constraint->asLongConstraint(); }
 
-   /* Getter and setter methods */
-
    int32_t getParamPosition() { return _paramPos; }
-   void setParamPosition(int paramPos) { _paramPos = paramPos; }
+   void setParamPosition(int32_t paramPos) { _paramPos = paramPos; }
 
    void setImplicitParam() { TR_ASSERT_FATAL(_paramPos == 0, "Cannot set as implicit param"); _isImplicitParameter = true; }
 
@@ -145,13 +131,13 @@ class AbsValue
    
    TR::VPConstraint* getConstraint() { return _constraint; }
 
-   void print(TR::Compilation* comp,OMR::ValuePropagation *vp);
+   void print(TR::Compilation* comp, TR::ValuePropagation *vp);
 
    private:
 
    bool _isImplicitParameter;
-   bool _isDummy;
-   int _paramPos; 
+   int32_t _paramPos; 
+   
    TR::VPConstraint* _constraint;
    TR::DataType _dataType;
    };
