@@ -21,69 +21,81 @@
 
 #include "optimizer/abstractinterpreter/AbsStackMachineState.hpp"
 
-AbsStackMachineState::AbsStackMachineState(TR::Region &region) :
-      _array(region),
-      _stack(region)
+template <typename Constraint>
+TR::AbsStackMachineState<Constraint>::AbsStackMachineState(TR::Region &region) :
+      _array(new (region) TR::AbsLocalVarArray<Constraint>(region)),
+      _stack(new (region) TR::AbsOpStack<Constraint>(region))
    {
    }
 
-AbsStackMachineState::AbsStackMachineState(AbsStackMachineState* other, TR::Region& region) :
-      _array(other->_array, region),
-      _stack(other->_stack, region)
+template <typename Constraint>
+TR::AbsStackMachineState<Constraint>* TR::AbsStackMachineState<Constraint>::clone(TR::Region& region) 
    {
+   TR::AbsStackMachineState<Constraint>* copy = new (region) TR::AbsStackMachineState<Constraint>(region);
+
+   copy->_array = _array->clone(region);
+   copy->_stack = _stack->clone(region);
+
+   return copy;
    }
 
-void AbsStackMachineState::merge(AbsStackMachineState* other, TR::ValuePropagation *vp)
+template <typename Constraint>
+void TR::AbsStackMachineState<Constraint>::merge(TR::AbsStackMachineState<Constraint>* other)
    {
-   _array.merge(other->_array, vp);
-   _stack.merge(other->_stack, vp);
+   _array->merge(other->_array);
+   _stack->merge(other->_stack);
    }
 
-
-void AbsStackMachineState::print(TR::Compilation* comp, TR::ValuePropagation *vp)
+template <typename Constraint>
+void TR::AbsStackMachineState<Constraint>::print(TR::Compilation* comp)
    {
    traceMsg(comp, "\n|| Contents of AbsStackMachineState ||\n");
-   _array.print(comp,vp);
-   _stack.print(comp,vp);
+   _array->print(comp);
+   _stack->print(comp);
    }
 
-AbsOpStack::AbsOpStack(TR::Region &region) :
-      _stack(region)
+template <typename Constraint>
+TR::AbsOpStack<Constraint>* TR::AbsOpStack<Constraint>::clone(TR::Region &region)
    {
+   TR::AbsOpStack<Constraint>* copy = new (region) TR::AbsOpStack<Constraint>(region);
+   for (size_t i = 0; i < _container.size(); i ++)
+      {
+      copy->_container.push_back(_container[i]->clone(region));
+      }
+   return copy;
    }
 
-AbsOpStack::AbsOpStack(AbsOpStack &other, TR::Region &region) :
-      _stack(region)
-   {
-   for (size_t i = 0; i < other.size(); i ++)
-      push(AbsValue::create(region, other._stack[i]));  
-   }
-
-AbsValue* AbsOpStack::pop()
+template <typename Constraint>
+TR::AbsValue<Constraint>* TR::AbsOpStack<Constraint>::pop()
    {
    TR_ASSERT_FATAL(size() > 0, "Pop an empty stack!");
-   AbsValue *value = _stack.back();
-   _stack.pop_back();
+   TR::AbsValue<Constraint> *value = _container.back();
+   _container.pop_back();
    return value;
    }
 
-void AbsOpStack::merge(AbsOpStack &other, TR::ValuePropagation *vp)
+template <typename Constraint>
+void TR::AbsOpStack<Constraint>::merge(TR::AbsOpStack<Constraint>* other)
    {
-   TR_ASSERT_FATAL(other._stack.size() == _stack.size(), "Stacks have different sizes!");
+   TR_ASSERT_FATAL(other->_container.size() == _container.size(), "Stacks have different sizes!");
 
-   for (size_t i = 0; i < _stack.size(); i ++)
-      _stack[i]->merge(other._stack[i], vp);
-   }
-
-void AbsOpStack::setToTop()
-   {
-   for (size_t i = 0; i <  _stack.size(); i ++)
+   for (size_t i = 0; i < _container.size(); i ++)
       {
-      _stack[i]->setToTop();
+      _container[i]->merge(other->_container[i]);
       }
    }
 
-void AbsOpStack::print(TR::Compilation* comp, TR::ValuePropagation *vp)
+template <typename Constraint>
+void TR::AbsOpStack<Constraint>::setToTop()
+   {
+   for (size_t i = 0; i <  _container.size(); i ++)
+      {
+      _container[i]->setToTop();
+      }
+   }
+
+template <typename Constraint>
+void TR::AbsOpStack<Constraint>::print(TR::Compilation* comp)
    {
    traceMsg(comp, "Contents of Abstract Operand Stack:\n");
    
@@ -100,10 +112,10 @@ void AbsOpStack::print(TR::Compilation* comp, TR::ValuePropagation *vp)
 
    for (int32_t i = 0; i < stackSize; i++) 
       {
-      AbsValue *value = _stack[stackSize - i -1 ];
+      TR::AbsValue<Constraint> *value = _container[stackSize - i -1 ];
       traceMsg(comp, "S[%d] = ", stackSize - i - 1);
       if (value)
-         value->print(comp, vp);
+         value->print(comp);
       traceMsg(comp, "\n");
       }
 
@@ -111,39 +123,38 @@ void AbsOpStack::print(TR::Compilation* comp, TR::ValuePropagation *vp)
    traceMsg(comp, "\n");
    }
 
-AbsLocalVarArray::AbsLocalVarArray(TR::Region &region) :
-      _array(region)
+template <typename Constraint>
+TR::AbsLocalVarArray<Constraint>* TR::AbsLocalVarArray<Constraint>::clone(TR::Region& region)
    {
+   TR::AbsLocalVarArray<Constraint>* copy = new (region) TR::AbsLocalVarArray<Constraint>(region);
+   for (size_t i = 0; i < _container.size(); i ++)
+      {
+      copy->_container.push_back(_container[i] ? _container[i]->clone(region) : NULL);
+      }
+   return copy;
    }
 
-AbsLocalVarArray::AbsLocalVarArray(AbsLocalVarArray &other, TR::Region& region) :
-      _array(region)
+template <typename Constraint>
+void TR::AbsLocalVarArray<Constraint>::setToTop()
    {
-   for (size_t i = 0; i < other._array.size(); i++)
+   for (size_t i = 0; i < _container.size(); i ++)
       {
-      _array.push_back(other._array[i] ? AbsValue::create(region, other._array[i]) : NULL);
+      if (_container[i])
+         _container[i]->setToTop();
       }
    }
 
-void AbsLocalVarArray::setToTop()
+template <typename Constraint>
+void TR::AbsLocalVarArray<Constraint>::merge(TR::AbsLocalVarArray<Constraint>* other)
    {
-   for (size_t i = 0; i < _array.size(); i ++)
-      {
-      if (_array[i])
-         _array[i]->setToTop();
-      }
-   }
-   
-void AbsLocalVarArray::merge(AbsLocalVarArray &other, TR::ValuePropagation *vp)
-   {
-   const int32_t otherSize = other.size();
+   const int32_t otherSize = other->size();
    const int32_t selfSize = size();
    const int32_t mergedSize = std::max(selfSize, otherSize);
 
    for (int32_t i = 0; i < mergedSize; i++)
       {
-      AbsValue *selfValue = i < size() ? at(i) : NULL;
-      AbsValue *otherValue = i < other.size() ? other.at(i) : NULL;
+      TR::AbsValue<Constraint> *selfValue = i < size() ? at(i) : NULL;
+      TR::AbsValue<Constraint> *otherValue = i < other->size() ? other->at(i) : NULL;
 
       if (!selfValue && !otherValue) 
          {
@@ -151,36 +162,39 @@ void AbsLocalVarArray::merge(AbsLocalVarArray &other, TR::ValuePropagation *vp)
          }
       else if (selfValue && otherValue) 
          {
-         AbsValue* mergedVal = selfValue->merge(otherValue, vp);
+         TR::AbsValue<Constraint>* mergedVal = selfValue->merge(otherValue);
          set(i, mergedVal);
          } 
       else if (selfValue) 
          {
          set(i, selfValue);
          } 
-      else if (otherValue)
+      else
          {
          set(i, otherValue);
          }
       }
    }
 
-void AbsLocalVarArray::set(uint32_t index, AbsValue *value)
+template <typename Constraint>
+void TR::AbsLocalVarArray<Constraint>::set(uint32_t index, TR::AbsValue<Constraint> *value)
    {
    if (size() <= index)
       {
-      _array.resize(index + 1);
+      _container.resize(index + 1);
       }
-   _array[index] = value;
-   }
-   
-AbsValue* AbsLocalVarArray::at(uint32_t index)
-   {
-   TR_ASSERT_FATAL(index < size(), "Index out of range!");
-   return _array[index]; 
+   _container[index] = value;
    }
 
-void AbsLocalVarArray::print(TR::Compilation* comp, TR::ValuePropagation *vp)
+template <typename Constraint>
+TR::AbsValue<Constraint>* TR::AbsLocalVarArray<Constraint>::at(uint32_t index)
+   {
+   TR_ASSERT_FATAL(index < size(), "Index out of range!");
+   return _container[index]; 
+   }
+
+template <typename Constraint>
+void TR::AbsLocalVarArray<Constraint>::print(TR::Compilation* comp)
    {
    traceMsg(comp, "Contents of Abstract Local Variable Array:\n");
    const int32_t arraySize = size();
@@ -192,8 +206,13 @@ void AbsLocalVarArray::print(TR::Compilation* comp, TR::ValuePropagation *vp)
          traceMsg(comp, "NULL\n");
          continue;
          }
-      at(i)->print(comp, vp);
+      at(i)->print(comp);
       traceMsg(comp, "\n");
       }
    traceMsg(comp, "\n");
    }
+
+template class TR::AbsStackMachineState<TR::VPConstraint>;
+template class TR::AbsOpStack<TR::VPConstraint>;
+template class TR::AbsLocalVarArray<TR::VPConstraint>;
+template class TR::AbsArguments<TR::VPConstraint>;

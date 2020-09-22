@@ -26,6 +26,8 @@
 #include "env/Region.hpp"
 #include "optimizer/abstractinterpreter/AbsValue.hpp"
 
+namespace TR {
+
 /**
  * Abstract representation of the program state.
  */
@@ -37,19 +39,34 @@ class AbsState
  * Abstract representation of the the arguments.
  * This is used for method invocation to pass arguments from caller to callee method during abstract interpretation.
  */
+template <typename Constraint>
 class AbsArguments
    {
    public:
-   AbsArguments(uint32_t size, TR::Region& region) {_args = new (region) AbsValue*[size]; _size = size; }
+   AbsArguments(uint32_t size, TR::Region& region) {_args = new (region) TR::AbsValue<Constraint>*[size]; _size = size; }
 
-   void set(uint32_t i, AbsValue* arg) { TR_ASSERT_FATAL(i < _size, "Index out of range"); _args[i] = arg; }
-   AbsValue* at(uint32_t i) { TR_ASSERT_FATAL(i < _size, "Index out of range"); return _args[i]; }
+   /**
+    * @brief Set an argument at position i
+    * 
+    * @param i The argument position
+    * @param arg The argument
+    */
+   void set(uint32_t i, TR::AbsValue<Constraint>* arg) { TR_ASSERT_FATAL(i < _size, "Index out of range"); _args[i] = arg; }
+
+   /**
+    * @brief Get the arg at position i
+    * 
+    * @param i The argument position
+    * @return The argument
+    */
+   TR::AbsValue<Constraint>* at(uint32_t i) { TR_ASSERT_FATAL(i < _size, "Index out of range"); return _args[i]; }
 
    uint32_t size() { return _size; }
    
    private:
    uint32_t _size;
-   AbsValue** _args;
+   TR::AbsValue<Constraint>** _args;
    };
+}
 
 #endif
