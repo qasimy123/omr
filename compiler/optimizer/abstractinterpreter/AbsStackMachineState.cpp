@@ -21,17 +21,15 @@
 
 #include "optimizer/abstractinterpreter/AbsStackMachineState.hpp"
 
-template <typename Constraint>
-TR::AbsStackMachineState<Constraint>::AbsStackMachineState(TR::Region &region) :
-      _array(new (region) TR::AbsLocalVarArray<Constraint>(region)),
-      _stack(new (region) TR::AbsOpStack<Constraint>(region))
+TR::AbsStackMachineState::AbsStackMachineState(TR::Region &region) :
+      _array(new (region) TR::AbsLocalVarArray(region)),
+      _stack(new (region) TR::AbsOpStack(region))
    {
    }
 
-template <typename Constraint>
-TR::AbsStackMachineState<Constraint>* TR::AbsStackMachineState<Constraint>::clone(TR::Region& region) 
+TR::AbsState* TR::AbsStackMachineState::clone(TR::Region& region) 
    {
-   TR::AbsStackMachineState<Constraint>* copy = new (region) TR::AbsStackMachineState<Constraint>(region);
+   TR::AbsStackMachineState* copy = new (region) TR::AbsStackMachineState(region);
 
    copy->_array = _array->clone(region);
    copy->_stack = _stack->clone(region);
@@ -39,25 +37,23 @@ TR::AbsStackMachineState<Constraint>* TR::AbsStackMachineState<Constraint>::clon
    return copy;
    }
 
-template <typename Constraint>
-void TR::AbsStackMachineState<Constraint>::merge(TR::AbsStackMachineState<Constraint>* other)
+void TR::AbsStackMachineState::merge(TR::AbsState* other)
    {
-   _array->merge(other->_array);
-   _stack->merge(other->_stack);
+   TR::AbsStackMachineState* otherStackMachineState = static_cast<TR::AbsStackMachineState*>(other);
+   _array->merge(otherStackMachineState->_array);
+   _stack->merge(otherStackMachineState->_stack);
    }
 
-template <typename Constraint>
-void TR::AbsStackMachineState<Constraint>::print(TR::Compilation* comp)
+void TR::AbsStackMachineState::print(TR::Compilation* comp)
    {
    traceMsg(comp, "\n|| Contents of AbsStackMachineState ||\n");
    _array->print(comp);
    _stack->print(comp);
    }
 
-template <typename Constraint>
-TR::AbsOpStack<Constraint>* TR::AbsOpStack<Constraint>::clone(TR::Region &region)
+TR::AbsOpStack* TR::AbsOpStack::clone(TR::Region &region)
    {
-   TR::AbsOpStack<Constraint>* copy = new (region) TR::AbsOpStack<Constraint>(region);
+   TR::AbsOpStack* copy = new (region) TR::AbsOpStack(region);
    for (size_t i = 0; i < _container.size(); i ++)
       {
       copy->_container.push_back(_container[i]->clone(region));
@@ -65,17 +61,15 @@ TR::AbsOpStack<Constraint>* TR::AbsOpStack<Constraint>::clone(TR::Region &region
    return copy;
    }
 
-template <typename Constraint>
-TR::AbsValue<Constraint>* TR::AbsOpStack<Constraint>::pop()
+TR::AbsValue* TR::AbsOpStack::pop()
    {
    TR_ASSERT_FATAL(size() > 0, "Pop an empty stack!");
-   TR::AbsValue<Constraint> *value = _container.back();
+   TR::AbsValue *value = _container.back();
    _container.pop_back();
    return value;
    }
 
-template <typename Constraint>
-void TR::AbsOpStack<Constraint>::merge(TR::AbsOpStack<Constraint>* other)
+void TR::AbsOpStack::merge(TR::AbsOpStack* other)
    {
    TR_ASSERT_FATAL(other->_container.size() == _container.size(), "Stacks have different sizes!");
 
@@ -85,8 +79,7 @@ void TR::AbsOpStack<Constraint>::merge(TR::AbsOpStack<Constraint>* other)
       }
    }
 
-template <typename Constraint>
-void TR::AbsOpStack<Constraint>::setToTop()
+void TR::AbsOpStack::setToTop()
    {
    for (size_t i = 0; i <  _container.size(); i ++)
       {
@@ -94,8 +87,7 @@ void TR::AbsOpStack<Constraint>::setToTop()
       }
    }
 
-template <typename Constraint>
-void TR::AbsOpStack<Constraint>::print(TR::Compilation* comp)
+void TR::AbsOpStack::print(TR::Compilation* comp)
    {
    traceMsg(comp, "Contents of Abstract Operand Stack:\n");
    
@@ -112,7 +104,7 @@ void TR::AbsOpStack<Constraint>::print(TR::Compilation* comp)
 
    for (int32_t i = 0; i < stackSize; i++) 
       {
-      TR::AbsValue<Constraint> *value = _container[stackSize - i -1 ];
+      TR::AbsValue *value = _container[stackSize - i -1 ];
       traceMsg(comp, "S[%d] = ", stackSize - i - 1);
       if (value)
          value->print(comp);
@@ -123,10 +115,9 @@ void TR::AbsOpStack<Constraint>::print(TR::Compilation* comp)
    traceMsg(comp, "\n");
    }
 
-template <typename Constraint>
-TR::AbsLocalVarArray<Constraint>* TR::AbsLocalVarArray<Constraint>::clone(TR::Region& region)
+TR::AbsLocalVarArray* TR::AbsLocalVarArray::clone(TR::Region& region)
    {
-   TR::AbsLocalVarArray<Constraint>* copy = new (region) TR::AbsLocalVarArray<Constraint>(region);
+   TR::AbsLocalVarArray* copy = new (region) TR::AbsLocalVarArray(region);
    for (size_t i = 0; i < _container.size(); i ++)
       {
       copy->_container.push_back(_container[i] ? _container[i]->clone(region) : NULL);
@@ -134,8 +125,7 @@ TR::AbsLocalVarArray<Constraint>* TR::AbsLocalVarArray<Constraint>::clone(TR::Re
    return copy;
    }
 
-template <typename Constraint>
-void TR::AbsLocalVarArray<Constraint>::setToTop()
+void TR::AbsLocalVarArray::setToTop()
    {
    for (size_t i = 0; i < _container.size(); i ++)
       {
@@ -144,8 +134,7 @@ void TR::AbsLocalVarArray<Constraint>::setToTop()
       }
    }
 
-template <typename Constraint>
-void TR::AbsLocalVarArray<Constraint>::merge(TR::AbsLocalVarArray<Constraint>* other)
+void TR::AbsLocalVarArray::merge(TR::AbsLocalVarArray* other)
    {
    const int32_t otherSize = other->size();
    const int32_t selfSize = size();
@@ -153,8 +142,8 @@ void TR::AbsLocalVarArray<Constraint>::merge(TR::AbsLocalVarArray<Constraint>* o
 
    for (int32_t i = 0; i < mergedSize; i++)
       {
-      TR::AbsValue<Constraint> *selfValue = i < size() ? at(i) : NULL;
-      TR::AbsValue<Constraint> *otherValue = i < other->size() ? other->at(i) : NULL;
+      TR::AbsValue *selfValue = i < size() ? at(i) : NULL;
+      TR::AbsValue *otherValue = i < other->size() ? other->at(i) : NULL;
 
       if (!selfValue && !otherValue) 
          {
@@ -162,7 +151,7 @@ void TR::AbsLocalVarArray<Constraint>::merge(TR::AbsLocalVarArray<Constraint>* o
          }
       else if (selfValue && otherValue) 
          {
-         TR::AbsValue<Constraint>* mergedVal = selfValue->merge(otherValue);
+         TR::AbsValue* mergedVal = selfValue->merge(otherValue);
          set(i, mergedVal);
          } 
       else if (selfValue) 
@@ -176,8 +165,7 @@ void TR::AbsLocalVarArray<Constraint>::merge(TR::AbsLocalVarArray<Constraint>* o
       }
    }
 
-template <typename Constraint>
-void TR::AbsLocalVarArray<Constraint>::set(uint32_t index, TR::AbsValue<Constraint> *value)
+void TR::AbsLocalVarArray::set(uint32_t index, TR::AbsValue *value)
    {
    if (size() <= index)
       {
@@ -186,15 +174,13 @@ void TR::AbsLocalVarArray<Constraint>::set(uint32_t index, TR::AbsValue<Constrai
    _container[index] = value;
    }
 
-template <typename Constraint>
-TR::AbsValue<Constraint>* TR::AbsLocalVarArray<Constraint>::at(uint32_t index)
+TR::AbsValue* TR::AbsLocalVarArray::at(uint32_t index)
    {
    TR_ASSERT_FATAL(index < size(), "Index out of range!");
    return _container[index]; 
    }
 
-template <typename Constraint>
-void TR::AbsLocalVarArray<Constraint>::print(TR::Compilation* comp)
+void TR::AbsLocalVarArray::print(TR::Compilation* comp)
    {
    traceMsg(comp, "Contents of Abstract Local Variable Array:\n");
    const int32_t arraySize = size();
@@ -211,8 +197,3 @@ void TR::AbsLocalVarArray<Constraint>::print(TR::Compilation* comp)
       }
    traceMsg(comp, "\n");
    }
-
-template class TR::AbsStackMachineState<TR::VPConstraint>;
-template class TR::AbsOpStack<TR::VPConstraint>;
-template class TR::AbsLocalVarArray<TR::VPConstraint>;
-template class TR::AbsArguments<TR::VPConstraint>;
