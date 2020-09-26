@@ -33,17 +33,42 @@ namespace TR {
  */
 class AbsState
    {
+   public:
+   /**
+    * @brief Merge with another state. This shoule be in-place merge.
+    *
+    * @param other another state to be merged with
+    */
+   virtual void merge(TR::AbsState* other)=0;
+
+   /**
+    * @brief clone a state
+    * 
+    * @param region The memory region where the state would like to be allocated on
+    * @return the cloned state
+    * 
+    */
+   virtual TR::AbsState* clone(TR::Region& region)=0;
+
+   /**
+    * @brief Set all the abstract values in this state to the least precise ones.
+    */
+   virtual void setToTop()=0;
+
+   virtual void print(TR::Compilation* comp)=0;
    };
 
 /**
  * Abstract representation of the the arguments.
  * This is used for method invocation to pass arguments from caller to callee method during abstract interpretation.
  */
-template <typename Constraint>
 class AbsArguments
    {
    public:
-   AbsArguments(uint32_t size, TR::Region& region) {_args = new (region) TR::AbsValue<Constraint>*[size]; _size = size; }
+   AbsArguments(uint32_t size, TR::Region& region) :
+         _args(new (region) TR::AbsValue*[size]),
+         _size(size)
+      {}
 
    /**
     * @brief Set an argument at position i
@@ -51,7 +76,7 @@ class AbsArguments
     * @param i The argument position
     * @param arg The argument
     */
-   void set(uint32_t i, TR::AbsValue<Constraint>* arg) { TR_ASSERT_FATAL(i < _size, "Index out of range"); _args[i] = arg; }
+   void set(uint32_t i, TR::AbsValue* arg) { TR_ASSERT_FATAL(i < _size, "Index out of range"); _args[i] = arg; }
 
    /**
     * @brief Get the arg at position i
@@ -59,13 +84,13 @@ class AbsArguments
     * @param i The argument position
     * @return The argument
     */
-   TR::AbsValue<Constraint>* at(uint32_t i) { TR_ASSERT_FATAL(i < _size, "Index out of range"); return _args[i]; }
+   TR::AbsValue* at(uint32_t i) { TR_ASSERT_FATAL(i < _size, "Index out of range"); return _args[i]; }
 
    uint32_t size() { return _size; }
    
    private:
    uint32_t _size;
-   TR::AbsValue<Constraint>** _args;
+   TR::AbsValue** _args;
    };
 }
 

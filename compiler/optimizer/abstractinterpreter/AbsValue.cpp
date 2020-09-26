@@ -21,7 +21,7 @@
 
 #include "optimizer/abstractinterpreter/AbsValue.hpp"
 
-TR::AbsValue<TR::VPConstraint>* TR::AbsVPValue::clone(TR::Region& region)
+TR::AbsValue* TR::AbsVPValue::clone(TR::Region& region)
    {
    TR::AbsVPValue* copy = new (region) TR::AbsVPValue(_vp, _constraint, _dataType);
    copy->setParamPosition(_paramPos);
@@ -32,30 +32,31 @@ TR::AbsValue<TR::VPConstraint>* TR::AbsVPValue::clone(TR::Region& region)
    return copy;
    }
 
-TR::AbsValue<TR::VPConstraint>* TR::AbsVPValue::merge(TR::AbsValue<TR::VPConstraint> *other)
+TR::AbsValue* TR::AbsVPValue::merge(TR::AbsValue *other)
    {
    TR_ASSERT_FATAL(other, "Cannot merge with a NULL AbsValue");
-      
-   //when merging with a different DataType
+
    if (other->getDataType() != _dataType) 
       return NULL;
 
    if (!_constraint)
       return this;
 
-   if (!other->getConstraint()) 
-      {
-      _constraint = NULL;
-      return this;
-      }
-   
    if (_paramPos != other->getParamPosition()) 
       _paramPos = -1;
 
    if (_isImplicitParameter && !other->isImplicitParameter())
       _isImplicitParameter = false;
 
-   TR::VPConstraint *mergedConstraint = _constraint->merge(other->getConstraint(), _vp);
+   TR::AbsVPValue* otherVPValue = static_cast<TR::AbsVPValue*>(other);
+
+   if (otherVPValue->isTop()) 
+      {
+      setToTop();
+      return this;
+      }
+
+   TR::VPConstraint *mergedConstraint = _constraint->merge(otherVPValue->getConstraint(), _vp);
 
    if (mergedConstraint) //mergedConstaint can be VPMergedIntConstraint or VPMergedLongConstraint. Turn them into VPIntRange or VPLongRange to make things easier.
       {
@@ -89,4 +90,3 @@ void TR::AbsVPValue::print(TR::Compilation* comp)
       traceMsg(comp, " {implicit param} ");
    }
 
-template class TR::AbsValue<TR::VPConstraint>;
