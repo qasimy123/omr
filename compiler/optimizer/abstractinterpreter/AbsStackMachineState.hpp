@@ -32,7 +32,6 @@ namespace TR {
  * Abstract representation of the operand stack.
  * Constraint is the type of the constraint that abstract value would like to use.
  */
-template <typename Constraint>
 class AbsOpStack
    {
    public:
@@ -46,14 +45,14 @@ class AbsOpStack
     * @param region The memory region where the cloned op stack would like to allocated on.
     * @return the op stack cloned.
     */
-   TR::AbsOpStack<Constraint>* clone(TR::Region& region);
+   TR::AbsOpStack* clone(TR::Region& region);
 
    /**
     * @brief Merge with another operand stack. This is in-place merge.
     *
     * @param other the operand stack to be merged with
     */
-   void merge(TR::AbsOpStack<Constraint>* other);
+   void merge(TR::AbsOpStack* other);
 
    /**
     * @brief Push an abstract value to the operand stack.
@@ -61,21 +60,21 @@ class AbsOpStack
     *
     * @param value the value to be pushed
     */
-   void push(TR::AbsValue<Constraint>* value) { TR_ASSERT_FATAL(value, "Push a NULL value"); _container.push_back(value); }
+   void push(TR::AbsValue* value) { TR_ASSERT_FATAL(value, "Push a NULL value"); _container.push_back(value); }
 
    /**
     * @brief Peek the operand stack
     *
     * @return the abstract value
     */
-   TR::AbsValue<Constraint>* peek() { TR_ASSERT_FATAL(size() > 0, "Peek an empty stack!"); return _container.back(); }
+   TR::AbsValue* peek() { TR_ASSERT_FATAL(size() > 0, "Peek an empty stack!"); return _container.back(); }
 
    /**
     * @brief Get and pop the value
     *
     * @return the abstract value
     */
-   TR::AbsValue<Constraint>* pop();
+   TR::AbsValue* pop();
 
    /**
     * @brief Set all the abstract values in this operand stack to the least precise ones
@@ -88,13 +87,12 @@ class AbsOpStack
    void print(TR::Compilation* comp);
 
    private:
-   TR::deque<TR::AbsValue<Constraint>*, TR::Region&> _container; 
+   TR::deque<TR::AbsValue*, TR::Region&> _container; 
    };
 
 /**
 .* Abstract representation of the local variable array.
  */
-template <typename Constraint>
 class AbsLocalVarArray
    {
    public:
@@ -108,7 +106,7 @@ class AbsLocalVarArray
     * @param region The memory region where the cloned local var array would like to be allocated on
     * @return the cloned local var array
     */
-   TR::AbsLocalVarArray<Constraint> *clone(TR::Region& region);
+   TR::AbsLocalVarArray *clone(TR::Region& region);
 
    /**
     * @brief Merge with another abstract local var array. This is in-place merge.
@@ -116,7 +114,7 @@ class AbsLocalVarArray
     * @param other The array to be merged with.
     * @param vp value propagation
     */
-   void merge(TR::AbsLocalVarArray<Constraint>* other);
+   void merge(TR::AbsLocalVarArray* other);
    
    /**
     * @brief Get the abstract value at index i.
@@ -124,7 +122,7 @@ class AbsLocalVarArray
     * @param i the local var array index
     * @return the abstract value
     */
-   TR::AbsValue<Constraint> *at(uint32_t i);
+   TR::AbsValue *at(uint32_t i);
 
    /**
     * @brief Set the abstract value at index i.
@@ -132,7 +130,7 @@ class AbsLocalVarArray
     * @param i the local var array index
     * @param value the abstract value to be set
     */
-   void set(uint32_t i, TR::AbsValue<Constraint>* value);
+   void set(uint32_t i, TR::AbsValue* value);
 
    /**
     * @brief Set all the abstract values in this local var array to the least precise ones.
@@ -143,13 +141,12 @@ class AbsLocalVarArray
    void print(TR::Compilation* comp);
 
    private:
-   TR::deque<TR::AbsValue<Constraint>*, TR::Region&> _container;
+   TR::deque<TR::AbsValue*, TR::Region&> _container;
    };
 
 /**
 .* Abstract representation of the program state of the stack machine. 
  */
-template <typename Constraint>
 class AbsStackMachineState : public AbsState
    {
    public:
@@ -162,7 +159,7 @@ class AbsStackMachineState : public AbsState
     * @return the cloned state
     * 
     */
-   TR::AbsStackMachineState<Constraint>* clone(TR::Region& region);
+   virtual TR::AbsState* clone(TR::Region& region);
 
    /**
     * @brief Set an abstract value at index i of the local variable array in this state.
@@ -170,7 +167,7 @@ class AbsStackMachineState : public AbsState
     * @param i the local variable array index
     * @param value the value to be set
     */
-   void set(uint32_t i, TR::AbsValue<Constraint>* value) { _array->set(i, value); }
+   void set(uint32_t i, TR::AbsValue* value) { _array->set(i, value); }
 
    /**
     * @brief Get the AbsValue at index i of the local variable array in this state.
@@ -178,49 +175,49 @@ class AbsStackMachineState : public AbsState
     * @param i the local variable array index
     * @return the abstract value
     */
-   TR::AbsValue<Constraint> *at(uint32_t i) { return _array->at(i); }
+   TR::AbsValue *at(uint32_t i) { return _array->at(i); }
 
    /**
     * @brief Push an AbsValue to the operand stack in this state.
     *
     * @param value the value to be pushed
     */
-   void push(TR::AbsValue<Constraint>* value) { _stack->push(value); }
+   void push(TR::AbsValue* value) { _stack->push(value); }
 
    /**
     * @brief Get and pop the AbsValue of the operand stack in this state.
     * 
     * @return the abstract value
     */
-   TR::AbsValue<Constraint>* pop() { return _stack->pop(); }
+   TR::AbsValue* pop() { return _stack->pop(); }
 
    /**
     * @brief Peek the operand stack in this state.
     *
     * @return the abstract value
     */
-   TR::AbsValue<Constraint>* peek() { return _stack->peek();  }
+   TR::AbsValue* peek() { return _stack->peek();  }
 
    /**
     * @brief Merge with another state. This is in-place merge.
     *
     * @param other another state to be merged with
     */
-   void merge(TR::AbsStackMachineState<Constraint>* other);
+   virtual void merge(TR::AbsState* other);
    
    /**
     * @brief Set all the abstract values in this state to the least precise ones.
     */
-   void setToTop() { _stack->setToTop(); _array->setToTop(); }
+   virtual void setToTop() { _stack->setToTop(); _array->setToTop(); }
 
    size_t getStackSize() {  return _stack->size();  }
    size_t getArraySize() {  return _array->size();  }
    
-   void print(TR::Compilation* comp);
+   virtual void print(TR::Compilation* comp);
 
    private:
-   TR::AbsLocalVarArray<Constraint>* _array;
-   TR::AbsOpStack<Constraint>* _stack;
+   TR::AbsLocalVarArray* _array;
+   TR::AbsOpStack* _stack;
    };
 }
 

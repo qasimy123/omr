@@ -34,15 +34,12 @@ namespace TR {
 /**
  * AbsValue is the abstract representation of a 'value'.
  * It is the basic unit used to perform abstract interpretation.
- * The Constraint needs to be implemented.
- * One such example is VPConstraint.
+ * This class is an abstract class.
  */
-template<typename Constraint>
 class AbsValue
    {
    public:
-   AbsValue(Constraint *constraint, TR::DataType dataType) :
-         _constraint(constraint),
+   AbsValue(TR::DataType dataType) :
          _dataType(dataType),
          _paramPos(-1),
          _isImplicitParameter(false)
@@ -52,10 +49,9 @@ class AbsValue
     * @brief Clone an abstract value
     * 
     * @param region The region where the cloned value will be allocated on.
-    * 
     * @return the cloned abstract value
     */
-   virtual TR::AbsValue<Constraint>* clone(TR::Region& region)=0;
+   virtual TR::AbsValue* clone(TR::Region& region)=0;
 
    /**
     * @brief Merge with another AbsValue. 
@@ -64,7 +60,7 @@ class AbsValue
     * @param other Another AbsValue to be merged with
     * @return NULL if failing to merge. Self if succeding to merge.
     */
-   virtual TR::AbsValue<Constraint>* merge(TR::AbsValue<Constraint> *other)=0;
+   virtual TR::AbsValue* merge(TR::AbsValue *other)=0;
 
    /**
     * @brief Check whether the AbsValue is least precise abstract value.
@@ -72,12 +68,12 @@ class AbsValue
     *
     * @return true if it is top. false otherwise
     */
-   bool isTop() { return _constraint == NULL; }
+   virtual bool isTop()=0;
 
    /**
     * @brief Set to the least precise abstract value.
     */
-   void setToTop() { _constraint = NULL; }
+   virtual void setToTop()=0;
 
    /**
     * @brief Check if the AbsValue is a parameter.
@@ -93,8 +89,6 @@ class AbsValue
     */   
    bool isImplicitParameter() { return _paramPos == 0 && _isImplicitParameter; }
 
-   Constraint* getConstraint() { return _constraint; }
-
    int32_t getParamPosition() { return _paramPos; }
    void setParamPosition(int32_t paramPos) { _paramPos = paramPos; }
 
@@ -108,30 +102,33 @@ class AbsValue
 
    bool _isImplicitParameter;
    int32_t _paramPos; 
-   
-   Constraint* _constraint;
    TR::DataType _dataType;
    };
 
 /**
  * An AbsValue which uses VPConstraint as the constraint.
  */
-class AbsVPValue : public AbsValue<TR::VPConstraint>
+class AbsVPValue : public AbsValue
    {
    public:
    AbsVPValue(TR::ValuePropagation*vp, TR::VPConstraint* constraint, TR::DataType dataType) :
-         TR::AbsValue<TR::VPConstraint>(constraint, dataType),
-         _vp(vp)
+         TR::AbsValue(dataType),
+         _vp(vp),
+         _constraint(constraint)
       {}
 
-   virtual TR::AbsValue<TR::VPConstraint>* clone(TR::Region& region);
+   TR::VPConstraint* getConstraint() { return _constraint; }
 
-   virtual TR::AbsValue<TR::VPConstraint>* merge(TR::AbsValue<TR::VPConstraint>* other);
+   virtual bool isTop() { return _constraint == NULL; }
+   virtual void setToTop() { _constraint = NULL; }
 
+   virtual TR::AbsValue* clone(TR::Region& region);
+   virtual TR::AbsValue* merge(TR::AbsValue* other);
    virtual void print(TR::Compilation* comp);
 
    private:
    TR::ValuePropagation* _vp;
+   TR::VPConstraint* _constraint;
    };
 
 }
