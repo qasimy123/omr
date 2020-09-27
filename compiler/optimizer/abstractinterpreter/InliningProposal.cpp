@@ -25,7 +25,7 @@
 #include "env/Region.hpp"
 #include "infra/BitVector.hpp"
 
-InliningProposal::InliningProposal(TR::Region& region, IDT *idt):
+TR::InliningProposal::InliningProposal(TR::Region& region, TR::IDT *idt):
    _cost(-1),
    _benefit(-1),
    _idt(idt),
@@ -34,7 +34,7 @@ InliningProposal::InliningProposal(TR::Region& region, IDT *idt):
    {
    }
 
-InliningProposal::InliningProposal(InliningProposal &proposal, TR::Region& region):
+TR::InliningProposal::InliningProposal(const InliningProposal &proposal, TR::Region& region):
    _cost(proposal._cost),
    _benefit(proposal._benefit),
    _idt(proposal._idt),
@@ -44,7 +44,7 @@ InliningProposal::InliningProposal(InliningProposal &proposal, TR::Region& regio
    *_nodes = *proposal._nodes;
    }
 
-void InliningProposal::print(TR::Compilation* comp)
+void TR::InliningProposal::print(TR::Compilation* comp)
    {
    bool traceBIProposal = comp->getOption(TR_TraceBIProposal);
    bool verboseInlining = comp->getOptions()->getVerboseOption(TR_VerboseInlining);
@@ -58,7 +58,7 @@ void InliningProposal::print(TR::Compilation* comp)
       return;
       }
 
-   int32_t numMethodsToInline =  _nodes->elementCount()-1;
+   const uint32_t numMethodsToInline =  _nodes->elementCount()-1;
   
    TR_ASSERT_FATAL(_idt, "Must have an IDT");
 
@@ -70,15 +70,15 @@ void InliningProposal::print(TR::Compilation* comp)
    if (verboseInlining)
       TR_VerboseLog::writeLineLocked(TR_Vlog_BI, header);
 
-   IDTNodeDeque idtNodeQueue(comp->trMemory()->currentStackRegion());
+   TR::IDTNodeDeque idtNodeQueue(comp->trMemory()->currentStackRegion());
    idtNodeQueue.push_back(_idt->getRoot());
 
    //BFS 
    while (!idtNodeQueue.empty()) 
       {
-      IDTNode* currentNode = idtNodeQueue.front();
+      TR::IDTNode* currentNode = idtNodeQueue.front();
       idtNodeQueue.pop_front();
-      int32_t index = currentNode->getGlobalIndex();
+      const int32_t index = currentNode->getGlobalIndex();
 
       if (index != -1) //do not print the root node
          { 
@@ -103,24 +103,22 @@ void InliningProposal::print(TR::Compilation* comp)
          } 
       
       //process children
-      int32_t numChildren = currentNode->getNumChildren();
+      const uint32_t numChildren = currentNode->getNumChildren();
 
-      for (int32_t i = 0; i < numChildren; i++)
+      for (uint32_t i = 0; i < numChildren; i++)
          idtNodeQueue.push_back(currentNode->getChild(i));
          
       } 
-
-   traceMsg(comp, "\nBit Vector\n");
-   _nodes->print(comp, comp->getOutFile());
+      
    traceMsg(comp, "\n");
    }
 
 
-void InliningProposal::addNode(IDTNode *node)
+void TR::InliningProposal::addNode(TR::IDTNode *node)
    {
    ensureBitVectorInitialized();
 
-   int32_t index = node->getGlobalIndex() + 1;
+   const int32_t index = node->getGlobalIndex() + 1;
    if (_nodes->isSet(index))
       {
       return;
@@ -129,7 +127,7 @@ void InliningProposal::addNode(IDTNode *node)
    _nodes->set(index);
    }
 
-bool InliningProposal::isEmpty()
+bool TR::InliningProposal::isEmpty()
    {
    if (!_nodes)
       return true;
@@ -137,7 +135,7 @@ bool InliningProposal::isEmpty()
    return _nodes->isEmpty();
    }
 
-int32_t InliningProposal::getCost()
+uint32_t TR::InliningProposal::getCost()
    {
    if (_cost == -1) 
       {
@@ -147,7 +145,7 @@ int32_t InliningProposal::getCost()
    return _cost;
    }
 
-int32_t InliningProposal::getBenefit()
+uint32_t TR::InliningProposal::getBenefit()
    {
    if (_benefit == -1)
       {
@@ -157,7 +155,7 @@ int32_t InliningProposal::getBenefit()
    return _benefit;
    }
 
-void InliningProposal::computeCostAndBenefit()
+void TR::InliningProposal::computeCostAndBenefit()
    {  
    _cost = 0;
    _benefit = 0;
@@ -181,13 +179,13 @@ void InliningProposal::computeCostAndBenefit()
       }
    }
 
-void InliningProposal::ensureBitVectorInitialized()
+void TR::InliningProposal::ensureBitVectorInitialized()
    {
    if (!_nodes)
       _nodes = new (_region) TR_BitVector(_region);
    }
 
-bool InliningProposal::isNodeInProposal(IDTNode* node)
+bool TR::InliningProposal::isNodeInProposal(TR::IDTNode* node)
    {
    if (node == NULL)
       return false;
@@ -196,12 +194,12 @@ bool InliningProposal::isNodeInProposal(IDTNode* node)
    if (_nodes->isEmpty())
       return false;
 
-   int32_t idx = node->getGlobalIndex() + 1;
+   const int32_t idx = node->getGlobalIndex() + 1;
 
    return _nodes->isSet(idx);
    }
 
-void InliningProposal::unionInPlace(InliningProposal *a, InliningProposal *b)
+void TR::InliningProposal::unionInPlace(TR::InliningProposal *a, TR::InliningProposal *b)
    {
    ensureBitVectorInitialized();
    a->ensureBitVectorInitialized();
@@ -213,7 +211,7 @@ void InliningProposal::unionInPlace(InliningProposal *a, InliningProposal *b)
    _benefit = -1;
    }
 
-bool InliningProposal::intersects(InliningProposal* other)
+bool TR::InliningProposal::intersects(TR::InliningProposal* other)
    {
    if (!_nodes || !other->_nodes)
       return false;
@@ -222,21 +220,21 @@ bool InliningProposal::intersects(InliningProposal* other)
    }
 
 
-InliningProposalTable::InliningProposalTable(int32_t rows, int32_t cols, TR::Region& region) :
+TR::InliningProposalTable::InliningProposalTable(uint32_t rows, uint32_t cols, TR::Region& region) :
       _rows(rows),
       _cols(cols),
       _region(region)
    {
    _table = new (region) InliningProposal**[rows];
 
-   for (int32_t i = 0; i < rows; i ++)
+   for (uint32_t i = 0; i < rows; i ++)
       {
       _table[i] = new (region) InliningProposal*[cols];
       memset(_table[i], 0, sizeof(InliningProposal*)*cols);
       }
    }
 
-InliningProposal* InliningProposalTable::get(int32_t row, int32_t col)
+TR::InliningProposal* TR::InliningProposalTable::get(uint32_t row, uint32_t col)
    {
    InliningProposal* proposal = NULL;
 
@@ -248,7 +246,7 @@ InliningProposal* InliningProposalTable::get(int32_t row, int32_t col)
    return proposal;
    }
 
-void InliningProposalTable::set(int32_t row, int32_t col, InliningProposal* proposal)
+void TR::InliningProposalTable::set(uint32_t row, uint32_t col, TR::InliningProposal* proposal)
    {
    TR_ASSERT_FATAL(proposal, "proposal is NULL");
    TR_ASSERT_FATAL(row >=0 && row < _rows, "Invalid row index" );
@@ -256,3 +254,4 @@ void InliningProposalTable::set(int32_t row, int32_t col, InliningProposal* prop
 
    _table[row][col] = proposal; 
    }
+   

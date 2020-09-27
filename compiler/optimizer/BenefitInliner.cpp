@@ -27,62 +27,64 @@
 
 
 /**
- * Steps of BenefitInliner:
+ * Steps of TR::BenefitInliner:
  * 
  * 
- * 1. perform() --> 2. build IDT -->  3. abstract interpretation  -->  5. run inliner packing (nested knapsack) --> 6. perform inlining
+ * 1. perform() --> 2. build IDT -->  3. abstract interpretation  -->  4. update IDT --> 5. run inliner packing (nested knapsack) --> 6. perform inlining
  *                  |                                          |
- *                  |--4. update IDT with inlining summaries --| 
+ *                  |------------- build IDT ------------------| 
  *
  * 
  * Note: Abstract Interpretation is part of the IDT building process. Check the IDTBuilder.
  * 
  */
-int32_t BenefitInlinerWrapper::perform()
+int32_t TR::BenefitInlinerWrapper::perform()
    {
-   BenefitInliner inliner(optimizer(), this);
+   TR::BenefitInliner inliner(optimizer(), this);
 
-   inliner.buildInliningDependencyTree(); //IDT
-
+   inliner.buildInliningDependencyTree(); // IDT
+   inliner.updateInliningDependencyTree(); // update IDT Node's benefit
    inliner.inlinerPacking(); // nested knapsack
-
    inliner.performInlining(comp()->getMethodSymbol());
 
    return 1;
    }
 
-void BenefitInliner::buildInliningDependencyTree()
+void TR::BenefitInliner::buildInliningDependencyTree()
    {
    TR::IDTBuilder builder(comp()->getMethodSymbol(), _budget, region(), comp(), this);
    _inliningDependencyTree = builder.buildIDT();
-   
+   }
+
+void TR::BenefitInliner::updateInliningDependencyTree()
+   {
+   _inliningDependencyTree->updateAndFlattenIDT();
+
    if (comp()->getOption(TR_TraceBIIDTGen))
       _inliningDependencyTree->printTrace();
 
    _nextIDTNodeToInlineInto = _inliningDependencyTree->getRoot();
    }
 
-void BenefitInliner::inlinerPacking()
+void TR::BenefitInliner::inlinerPacking()
    {
-   _inliningDependencyTree->buildIndices();
-
-   int32_t idtSize = _inliningDependencyTree->getNumNodes();
-   int32_t budget = _budget;
+   const int32_t idtSize = _inliningDependencyTree->getNumNodes();
+   const int32_t budget = _budget;
 
    //initialize InliningProposal Table (idtSize x budget+1)
-   InliningProposalTable table(idtSize, budget + 1, comp()->trMemory()->currentStackRegion());
+   TR::InliningProposalTable table(idtSize, budget + 1, comp()->trMemory()->currentStackRegion());
 
-   IDTPreorderPriorityQueue preorderPQueue(_inliningDependencyTree, comp()->trMemory()->currentStackRegion()); 
-   for (int32_t row = 0; row < idtSize; row ++)
+   TR::IDTPreorderPriorityQueue preorderPQueue(_inliningDependencyTree, comp()->trMemory()->currentStackRegion()); 
+   for (uint32_t row = 0; row < idtSize; row ++)
       {
-      for (int32_t col = 1; col < budget + 1; col ++)
+      for (uint32_t col = 1; col < budget + 1; col ++)
          {
-         InliningProposal currentSet(comp()->trMemory()->currentStackRegion(), _inliningDependencyTree); // []
-         IDTNode* currentNode = preorderPQueue.get(row); 
+         TR::InliningProposal currentSet(comp()->trMemory()->currentStackRegion(), _inliningDependencyTree); // []
+         TR::IDTNode* currentNode = preorderPQueue.get(row); 
          
          currentSet.addNode(currentNode); //[ currentNode ]
          
-         int32_t offsetRow = row - 1;
+         uint32_t offsetRow = row - 1;
 
          while (!currentNode->isRoot() 
             && !table.get(offsetRow, col-currentSet.getCost())->isNodeInProposal(currentNode->getParent()))
@@ -99,7 +101,7 @@ void BenefitInliner::inlinerPacking()
             offsetRow--;
             }
 
-         InliningProposal* newProposal = new (comp()->trMemory()->currentStackRegion()) InliningProposal(comp()->trMemory()->currentStackRegion(), _inliningDependencyTree);
+         TR::InliningProposal* newProposal = new (comp()->trMemory()->currentStackRegion()) TR::InliningProposal(comp()->trMemory()->currentStackRegion(), _inliningDependencyTree);
          newProposal->unionInPlace(table.get(offsetRow, col - currentSet.getCost()), &currentSet);
 
          if (newProposal->getCost() <= col && newProposal->getBenefit() > table.get(row-1, col)->getBenefit()) //only set the new proposal if it fits the budget and has more benefits
@@ -109,7 +111,7 @@ void BenefitInliner::inlinerPacking()
          }
       }
    
-   InliningProposal* result = new (region()) InliningProposal(region(), _inliningDependencyTree); 
+   TR::InliningProposal* result = new (region()) TR::InliningProposal(region(), _inliningDependencyTree); 
    result->unionInPlace(result, table.get(idtSize-1, budget));
 
    if (comp()->getOption(TR_TraceBIProposal))
@@ -121,9 +123,9 @@ void BenefitInliner::inlinerPacking()
    _inliningProposal = result;
    }
 
-int32_t BenefitInlinerBase::getInliningBudget(TR::ResolvedMethodSymbol* callerSymbol)
+int32_t TR::BenefitInlinerBase::getInliningBudget(TR::ResolvedMethodSymbol* callerSymbol)
    {
-   int32_t size = callerSymbol->getResolvedMethod()->maxBytecodeIndex();
+   const int32_t size = callerSymbol->getResolvedMethod()->maxBytecodeIndex();
    
    int32_t budget;
 
@@ -131,7 +133,7 @@ int32_t BenefitInlinerBase::getInliningBudget(TR::ResolvedMethodSymbol* callerSy
       budget = std::max(1500, size * 2);
    else if (comp()->getMethodHotness() >= hot)
       budget = std::max(1500, size + (size >> 2));
-   else if (comp()->getMethodHotness() >= warm && size < 250)
+   else if (comp()->getMethodHotness() >= warm && size < 125)
       budget = 250;
    else if (comp()->getMethodHotness() >= warm && size < 700)
       budget = std::max(700, size + (size >> 2));
@@ -143,13 +145,13 @@ int32_t BenefitInlinerBase::getInliningBudget(TR::ResolvedMethodSymbol* callerSy
    return budget;
    }
 
-bool BenefitInlinerBase::inlineCallTargets(TR::ResolvedMethodSymbol *symbol, TR_CallStack *prevCallStack, TR_InnerPreexistenceInfo *info)
+bool TR::BenefitInlinerBase::inlineCallTargets(TR::ResolvedMethodSymbol *symbol, TR_CallStack *prevCallStack, TR_InnerPreexistenceInfo *info)
    {
    if (!_nextIDTNodeToInlineInto) 
       return false;
 
    if (comp()->trace(OMR::inlining))
-      traceMsg(comp(), "#BenefitInliner: inlining into %s\n", _nextIDTNodeToInlineInto->getName(comp()->trMemory()));
+      traceMsg(comp(), "#TR::BenefitInliner: inlining into %s\n", _nextIDTNodeToInlineInto->getName(comp()->trMemory()));
 
    TR_CallStack callStack(comp(), symbol, symbol->getResolvedMethod(), prevCallStack, 1500, true);
 
@@ -160,9 +162,9 @@ bool BenefitInlinerBase::inlineCallTargets(TR::ResolvedMethodSymbol *symbol, TR_
    return inlined;
    }
 
-bool BenefitInlinerBase::inlineIntoIDTNode(TR::ResolvedMethodSymbol *symbol, TR_CallStack *callStack, IDTNode *idtNode)
+bool TR::BenefitInlinerBase::inlineIntoIDTNode(TR::ResolvedMethodSymbol *symbol, TR_CallStack *callStack, TR::IDTNode *idtNode)
    {
-   int32_t inlineCount = 0;
+   uint32_t inlineCount = 0;
 
    for (TR::TreeTop * tt = symbol->getFirstTreeTop(); tt; tt = tt->getNextTreeTop())
       {
@@ -180,7 +182,7 @@ bool BenefitInlinerBase::inlineIntoIDTNode(TR::ResolvedMethodSymbol *symbol, TR_
       TR_ByteCodeInfo &bcInfo = node->getByteCodeInfo();
 
       //The actual call target to inline
-      IDTNode *childToInline = idtNode->findChildWithBytecodeIndex(bcInfo.getByteCodeIndex());
+      TR::IDTNode *childToInline = idtNode->findChildWithBytecodeIndex(bcInfo.getByteCodeIndex());
 
       if (!childToInline)
          continue;
@@ -205,7 +207,7 @@ bool BenefitInlinerBase::inlineIntoIDTNode(TR::ResolvedMethodSymbol *symbol, TR_
          if (inlineCount >= MAX_INLINE_COUNT)
             {
             if (comp()->trace(OMR::inlining))
-               traceMsg(comp(), "BenefitInliner: stopping inlining as max inline count of %d reached\n", MAX_INLINE_COUNT);
+               traceMsg(comp(), "TR::BenefitInliner: stopping inlining as max inline count of %d reached\n", MAX_INLINE_COUNT);
             break;
             }
 
@@ -219,7 +221,7 @@ bool BenefitInlinerBase::inlineIntoIDTNode(TR::ResolvedMethodSymbol *symbol, TR_
    return inlineCount > 0;
    }
 
-bool BenefitInlinerBase::analyzeCallSite(TR_CallStack * callStack, TR::TreeTop * callNodeTreeTop, TR::Node * parent, TR::Node * callNode, TR_CallTarget *calltargetToInline)
+bool TR::BenefitInlinerBase::analyzeCallSite(TR_CallStack * callStack, TR::TreeTop * callNodeTreeTop, TR::Node * parent, TR::Node * callNode, TR_CallTarget *calltargetToInline)
    {
 
    TR::SymbolReference *symRef = callNode->getSymbolReference();
@@ -235,7 +237,7 @@ bool BenefitInlinerBase::analyzeCallSite(TR_CallStack * callStack, TR::TreeTop *
 
    bool success = false;
 
-   for(int32_t i=0; i<callsite->numTargets(); i++)
+   for(uint32_t i=0; i<callsite->numTargets(); i++)
       {
       TR_CallTarget *calltarget = callsite->getTarget(i);
 

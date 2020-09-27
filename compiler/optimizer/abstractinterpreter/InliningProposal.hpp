@@ -28,59 +28,56 @@
 #include "infra/BitVector.hpp" 
 #include "compile/Compilation.hpp"
 
+namespace TR {
+
 /**
- *Inlining Proposal records which IDTNode is selected to be inlined.
- * 
+ *Inlining Proposal records the set of IDTNodes selected to be inlined.
  */
 class InliningProposal
    {
    public:
 
-   InliningProposal(TR::Region& region, IDT *idt);
-   InliningProposal(InliningProposal&, TR::Region& region);
+   InliningProposal(TR::Region& region, TR::IDT *idt);
+   InliningProposal(const TR::InliningProposal&, TR::Region& region);
 
    void print(TR::Compilation *comp);
    bool isEmpty();
 
-   int32_t getCost();
-   int32_t getBenefit();
+   uint32_t getCost();
+   uint32_t getBenefit();
 
    /**
     * @brief add an IDTNode selected to be inlined to the proposal
     *
-    * @param node IDTNode*
-    * 
-    * @return void
+    * @param node the IDTNode
     */
-   void addNode(IDTNode* node);
+   void addNode(TR::IDTNode* node);
 
    /**
     * @brief Check if the node is selected to be inlined
     *
-    * @param node IDTNode* 
+    * @param node the IDTNode to be checked
     * 
-    * @return bool
+    * @return true if in proposal. false otherwise.
     */
-   bool isNodeInProposal(IDTNode* node );
+   bool isNodeInProposal(TR::IDTNode* node );
 
    /**
     * @brief Union two proposals.
     *
-    * @param a InliningProposal*
-    * @param b InliningProposal*
-    * 
-    * @return void
+    * @param a one proposal
+    * @param b another proposal
     */
-   void unionInPlace(InliningProposal *a, InliningProposal* b);
+   void unionInPlace(TR::InliningProposal *a, TR::InliningProposal* b);
 
    /**
     * @brief Check if self intersects with another proposal.
     *
-    * @param other InliningProposal*
+    * @param other the proposal
     * 
-    * @return bool
+    * @return true of they intersect. false otherwise.
     */
-   bool intersects(InliningProposal* other);
+   bool intersects(TR::InliningProposal* other);
 
    private:
 
@@ -89,9 +86,9 @@ class InliningProposal
 
    TR::Region& _region;
    TR_BitVector *_nodes;
-   int32_t _cost;
-   int32_t _benefit;
-   IDT *_idt;
+   uint32_t _cost;
+   uint32_t _benefit;
+   TR::IDT *_idt;
 };
 
 
@@ -99,19 +96,21 @@ class InliningProposalTable
    {
    public:
 
-   InliningProposalTable(int32_t rows, int32_t cols, TR::Region& region);
-   InliningProposal* get(int32_t row, int32_t col);
-   void set(int32_t row, int32_t col, InliningProposal* proposal);
+   InliningProposalTable(uint32_t rows, uint32_t cols, TR::Region& region);
+   TR::InliningProposal* get(uint32_t row, uint32_t col);
+   void set(uint32_t row, uint32_t col, TR::InliningProposal* proposal);
 
    TR::Region& region() { return _region; }
 
-   InliningProposal* getEmptyProposal() { return new (region()) InliningProposal(region(), NULL); }
+   TR::InliningProposal* getEmptyProposal() { return new (region()) TR::InliningProposal(region(), NULL); }
    
    private:
    
-   int32_t _rows;
-   int32_t _cols;
+   uint32_t _rows;
+   uint32_t _cols;
    TR::Region& _region;
-   InliningProposal ***_table;
+   TR::InliningProposal ***_table;
    };
+}
+
 #endif
