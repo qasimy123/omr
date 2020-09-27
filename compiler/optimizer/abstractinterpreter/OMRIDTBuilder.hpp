@@ -40,13 +40,14 @@ namespace OMR { typedef OMR::IDTBuilder IDTBuilderConnector; }
 #include "optimizer/abstractinterpreter/IDTNode.hpp"
 
 namespace TR { class IDTBuilder; }
-class IDTBuilderVisitor;
+namespace TR { class IDTBuilderVisitor; }
 
 namespace OMR
 {
+
 class IDTBuilder
    {
-   friend class ::IDTBuilderVisitor;
+   friend class ::TR::IDTBuilderVisitor;
 
    public:
    
@@ -58,12 +59,13 @@ class IDTBuilder
     * and then builds the IDT recursively.
     * It stops when no more call site is found or the budget runs out.
     * 
-    * @return IDT*
+    * @return the inlining dependency tree
     * 
-    * The returned IDT is the final IDT that can be consumed by the inliner packing algorithm.
     */
-   IDT* buildIDT();
+   TR::IDT* buildIDT();
 
+   TR::IDTBuilder* self();
+   
    protected:
 
    TR::Compilation* comp() { return _comp; };
@@ -74,89 +76,52 @@ class IDTBuilder
 
    /**
     * @brief generate the control flow graph of a call target so that the abstract interpretation can use. 
-    * Note: This method needs language specific implementation.
-    *
-    * @param callTarget TR_CallTarget*
     * 
-    * @return TR::CFG*
+    * @note: This method needs language specific implementation.
+    *
+    * @param callTarget the call target to generate CFG for
+    * @return the control flow graph
     */
-   virtual TR::CFG* generateControlFlowGraph(TR_CallTarget* callTarget) { TR_UNIMPLEMENTED(); return NULL; }
+   TR::CFG* generateControlFlowGraph(TR_CallTarget* callTarget) { TR_UNIMPLEMENTED(); return NULL; }
 
    /**
     * @brief Perform the abstract interpretation on the method in the IDTNode. 
-    * Note: This method needs language specific implementation.
+    * 
+    * @note: This method needs language specific implementation.
     *
-    * @param node IDTNode*
-    * @param visitor IDTBuilderVisitor& - The IDTBuilderVisitor defines the callback method 
+    * @param node the node to be abstract interpreted
+    * @param visitor the visitor which defines the callback method 
     *                that will be called when visiting a call site during abtract interpretation.
-    * @param arguments AbsArguments* - The arguments are the AbsValues passed from the caller method.
-    * @param callerIndex int32_t
-    * 
-    * @return void
+    * @param arguments the arguments are the AbsValues passed from the caller method.
+    * @param callerIndex the caller index
     */
-   virtual void performAbstractInterpretation(IDTNode* node, IDTBuilderVisitor& visitor, AbsArguments* arguments, int32_t callerIndex) { TR_UNIMPLEMENTED(); }
+   void performAbstractInterpretation(TR::IDTNode* node, TR::IDTBuilderVisitor& visitor, TR::AbsArguments* arguments, int32_t callerIndex) { TR_UNIMPLEMENTED(); }
 
    /**
-    * @brief This is one of the two core methods for building the IDT.
-    *
-    * @param node IDTNode*
-    * @param arguments AbsArguments
-    * @param callerIndex int32_t
-    * @param budget int32_t
-    * @param callStack TR_CallStack*
-    * 
-    * @return void
+    * @param node the node to build a sub IDT for
+    * @param arguments the arguments passed from caller method
+    * @param callerIndex the caller index
+    * @param budget the budget for the sub IDT
+    * @param callStack the call stack
     */
-   void buildIDTHelper(IDTNode* node, AbsArguments* arguments, int32_t callerIndex, int32_t budget, TR_CallStack* callStack);
+   void buildIDT2(TR::IDTNode* node, TR::AbsArguments* arguments, int32_t callerIndex, int32_t budget, TR_CallStack* callStack);
    
    /**
-    * @brief add child to the IDTNode when identifing any call site.
-    * This is one of the two core methods for building the IDT.
-    * 
-    * Note: call targets in the call site may not be added as a new IDTNode due to some reasons.
+    * @brief add IDTNode(s) to the IDT
     *
-    * @param node IDTNode*
-    * @param callerIndex int32_t
-    * @param callSite TR_CallSite*
-    * @param arguments AbsArguments* - arguments passed from the caller method.
-    * @param callStack TR_CallStack*
-    * @param callBlock TR::Block* - the basic block where the call site is in.
+    * @param parent the parent node to add children for
+    * @param callerIndex the caller index
+    * @param callSite the call site
+    * @param callRatio the call ratio of this callsite
+    * @param arguments the arguments passed from the caller method.
+    * @param callStack the call stack
     * 
     * @return void
     */
-   void addChild(IDTNode* node, int32_t callerIndex, TR_CallSite* callSite, AbsArguments* arguments, TR_CallStack* callStack, TR::Block* callBlock);
-
-   /**
-    * @brief compute the call ratio of the call target.
-    * 
-    * @param callBlock TR::Block* 
-    * @param startBlock TR::Block* - The start block of caller's CFG
-    * 
-    * @return float
-    */
-   float computeCallRatio(TR::Block* callBlock, TR::Block* startBlock);
-
-   /**
-    * @brief compute static benefit of inlining a particular method.
-    * 
-    * @param summary InliningMethodSummary* 
-    * @param arguments AbsArguments*
-    * 
-    * @return int32_t
-    */
-   int32_t computeStaticBenefit(InliningMethodSummary* summary, AbsArguments* arguments);
-
-   IDTNode* checkIfMethodIsInterpreted(TR_ResolvedMethod* method);
-   void storeInterpretedMethod(TR_ResolvedMethod* method, IDTNode* node);
-
+   void addNodesToIDT(TR::IDTNode* parent, int32_t callerIndex, TR_CallSite* callSite, float callRatio, TR::AbsArguments* arguments, TR_CallStack* callStack);
    
-   IDT* _idt;
+   TR::IDT* _idt;
    TR::ResolvedMethodSymbol* _rootSymbol;
-
-   typedef TR::typed_allocator<std::pair<TR_OpaqueMethodBlock*, IDTNode*>, TR::Region&> InterpretedMethodMapAllocator;
-   typedef std::less<TR_OpaqueMethodBlock*> InterpretedMethodMapComparator;
-   typedef std::map<TR_OpaqueMethodBlock *, IDTNode*, InterpretedMethodMapComparator, InterpretedMethodMapAllocator> InterpretedMethodMap;
-   InterpretedMethodMap _interpretedMethodMap;
 
    int32_t _rootBudget;
    TR::Region& _region;
@@ -165,21 +130,24 @@ class IDTBuilder
    };
 }
 
-class IDTBuilderVisitor : public AbsVisitor
+namespace TR {
+
+class IDTBuilderVisitor : public TR::AbsVisitor
    {
    public:
-   IDTBuilderVisitor(OMR::IDTBuilder* idtBuilder, IDTNode* idtNode, TR_CallStack* callStack) :
+   IDTBuilderVisitor(TR::IDTBuilder* idtBuilder, TR::IDTNode* idtNode, TR_CallStack* callStack) :
          _idtBuilder(idtBuilder),
          _idtNode(idtNode),
          _callStack(callStack)
       {}
       
-   virtual void visitCallSite(TR_CallSite* callSite, int32_t callerIndex, TR::Block* callBlock, AbsArguments* arguments);
+   virtual void visitCallSite(TR_CallSite* callSite, int32_t callerIndex, TR::Block* callBlock, TR::AbsArguments* arguments);
 
    private:
-   OMR::IDTBuilder* _idtBuilder;
-   IDTNode* _idtNode;
+   TR::IDTBuilder* _idtBuilder;
+   TR::IDTNode* _idtNode;
    TR_CallStack* _callStack;
    };
+}
 
 #endif
