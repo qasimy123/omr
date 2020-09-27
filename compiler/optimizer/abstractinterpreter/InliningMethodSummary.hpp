@@ -22,178 +22,110 @@
 #ifndef INLINING_METHOD_SUMMARY_INCL
 #define INLINING_METHOD_SUMMARY_INCL
 
-#include "optimizer/VPConstraint.hpp"
-#include "optimizer/ValuePropagation.hpp"
+#include "infra/deque.hpp"
 #include "optimizer/abstractinterpreter/AbsValue.hpp"
 
-class PotentialOptimization;
+namespace TR {
 
 /**
- * The Inlining Method Summary captures potential optimization opportunities of inlining one particular method 
- * and also specifies the constraints that are the maximal safe values to make the optimizations happen.
- * 
+ * A potential optimization will be unlocked by inlining.
+ */
+class PotentialOptimization
+   {
+   public:
+   enum OptKind
+      {
+      BranchFolding,
+      NullCheckFolding,
+      InstanceOfFolding,
+      CheckCastFolding
+      };
+
+   PotentialOptimization(int32_t bci, TR::ResolvedMethodSymbol* symbol, TR::PotentialOptimization::OptKind optKind) :
+         _bytecodeIndex(bci),
+         _symbol(symbol),
+         _optKind(optKind)
+      {}
+
+   void trace(TR::Compilation* comp);
+
+   const char* getOptKindName();
+
+   private:
+   int32_t _bytecodeIndex;
+   TR::ResolvedMethodSymbol* _symbol;
+   TR::PotentialOptimization::OptKind _optKind;
+   };
+
+/**
+ * The inlinling method summary captures potentail optimizations after inlining a particular method.
  */
 class InliningMethodSummary
    {
    public:
+   InliningMethodSummary(TR::Region& region) :
+         _opts(region)
+      {}
 
-   /**
-    * @brief calculate the total static benefit coming from a particular parameter after inlining. 
-    *
-    * @param param AbsValue*
-    * @param paramPosition int32_t
-    * 
-    * @return int32_t
-    */
-   int32_t predicates(AbsValue* param, int32_t paramPosition);
+   void addOpt(TR::PotentialOptimization* opt) { _opts.push_back(opt); }
 
-   InliningMethodSummary(TR::Region& region, OMR::ValuePropagation* vp, TR::Compilation* comp) :
-      _region(region),
-      _potentialOpts(region),
-      _vp(vp),
-      _comp(comp)
-   {}
+   uint32_t getIndirectBenefit() { return _opts.size(); };
 
-   /** Add different kinds of potential optimization opportunities to the summary **/
-
-   void addIfEq(int32_t paramPosition);
-   void addIfNe(int32_t paramPosition);
-   void addIfGt(int32_t paramPosition);
-   void addIfGe(int32_t paramPosition);
-   void addIfLe(int32_t paramPosition);
-   void addIfLt(int32_t paramPosition);
-   void addIfNull(int32_t paramPosition);
-   void addIfNonNull(int32_t paramPosition);
-
-   void addNullCheck(int32_t paramPosition);
-
-   void addInstanceOf(int32_t paramPosition, TR_OpaqueClassBlock* classBlock);
-
-   void addCheckCast(int32_t paraPostion, TR_OpaqueClassBlock* classBlock);
-   
-   void trace();
+   void trace(TR::Compilation* comp);
 
    private:
-   void add(PotentialOptimization* opt);
-
-   TR::Compilation* comp() { return _comp; }
-   TR::Region& region() { return _region; }
-   OMR::ValuePropagation* vp() { return _vp; }
-
-   List<PotentialOptimization> _potentialOpts;
-   TR::Region &_region;
-   OMR::ValuePropagation *_vp;
-   TR::Compilation* _comp;
+   TR::deque<TR::PotentialOptimization*, TR::Region&> _opts;
    };
 
-class PotentialOptimization
+/**
+ * A Predicate tests if the given value is a safe value to unlock an optimization.
+ */
+class BranchFoldingPredicate
    {
    public:
-   PotentialOptimization(TR::VPConstraint *constraint, int32_t paramPosition) :
-      _constraint(constraint),
-      _paramPosition(paramPosition)
-   {}
-   
-   virtual void trace(OMR::ValuePropagation *vp, TR::Compilation*comp)=0; 
-   
-   /**
-    * @brief Test whether the given parameter's constraint is a safe value in terms of the optimization's constraint.
-    *
-    * @param param AbsValue*
-    * @param vp OMR::ValuePropagation*
-    * 
-    * @return bool
-    */
-   virtual bool predicate(AbsValue* param, OMR::ValuePropagation* vp) { return false; }
-   
-   virtual int32_t getWeight() { return 1; }
-
-   TR::VPConstraint* getConstraint()  { return _constraint; } 
-   int32_t getParamPosition() { return _paramPosition; }
-
-   protected:
-   TR::VPConstraint *_constraint;
-   int32_t _paramPosition;
-   };
-
-class BranchFolding : public PotentialOptimization
-   {
-   public:
-   enum Kinds
+   enum Kind
       {
       IfEq,
       IfNe,
+      IfLt,
       IfGt,
-      IfGe,
-      IfLt, 
       IfLe,
-      IfNull,
-      IfNonNull,
+      IfGe
       };
 
-   BranchFolding(TR::VPConstraint *constraint, int32_t paramPosition, Kinds kind) :
-      PotentialOptimization(constraint, paramPosition),
-      _kind(kind)
-   {}
-
-   virtual bool predicate(AbsValue* param, OMR::ValuePropagation* vp);
-
-   virtual void trace(OMR::ValuePropagation *vp, TR::Compilation*comp); 
-   virtual int32_t getWeight() { return 1; };
-
-   private:
-   Kinds _kind;
-
+   static bool predicate(int32_t low, int32_t high, TR::BranchFoldingPredicate::Kind kind);
    };
 
-class NullBranchFolding : public BranchFolding
+class NullBranchFoldingPredicate
    {
    public:
-   NullBranchFolding(TR::VPConstraint* constraint, int32_t paramPosition, Kinds kind):
-      BranchFolding(constraint, paramPosition, kind)
-   {}
+   enum Kind 
+      {
+      IfNull,
+      IfNonNull
+      };
 
-   virtual bool predicate(AbsValue* param, OMR::ValuePropagation* vp);
-   virtual int32_t getWeight() { return 1; }
+   static bool predicate(TR_YesNoMaybe isNonNull, TR::NullBranchFoldingPredicate::Kind kind);
    };
 
-class NullCheckFolding : public PotentialOptimization
+class NullCheckFoldingPredicate
    {
    public:
-   NullCheckFolding(TR::VPConstraint* constraint, int32_t paramPosition) :
-      PotentialOptimization(constraint, paramPosition)
-   {}
-
-   virtual bool predicate(AbsValue* param, OMR::ValuePropagation* vp);
-
-   virtual void trace(OMR::ValuePropagation *vp, TR::Compilation*comp);
-   virtual int32_t getWeight() { return 1; }
+   static bool predicate(TR_YesNoMaybe isNonNull);
    };
 
-class InstanceOfFolding : public PotentialOptimization
+class InstanceOfFoldingPredicate 
    {
    public:
-   InstanceOfFolding(TR::VPConstraint* constraint, int32_t paramPosition) :
-      PotentialOptimization(constraint, paramPosition)
-   {};
-
-   virtual bool predicate(AbsValue* param, OMR::ValuePropagation* vp);
-
-   virtual int32_t getWeight() { return 1; }
-   virtual void trace(OMR::ValuePropagation* vp, TR::Compilation*comp);
+   static bool predicate(TR_YesNoMaybe isNonNull, TR_OpaqueClassBlock* instanceClass, bool isFixedClass, TR_OpaqueClassBlock* castClass, TR_FrontEnd* fe);
    };
 
-class CheckCastFolding : public PotentialOptimization
+class CheckCastFoldingPredicate
    {
    public:
-   CheckCastFolding(TR::VPConstraint* constraint, int32_t paramPosition) :
-      PotentialOptimization(constraint, paramPosition)
-   {}
-
-   virtual bool predicate(AbsValue* param, OMR::ValuePropagation* vp);
-
-   virtual int32_t getWeight() { return 1; }
-   virtual void trace(OMR::ValuePropagation* vp, TR::Compilation* comp);
+   static bool predicate(TR_YesNoMaybe isNonNull, TR_OpaqueClassBlock* checkClass, bool isFixedClass, TR_OpaqueClassBlock* castClass, TR_FrontEnd* fe);
    };
+
+}
 
 #endif

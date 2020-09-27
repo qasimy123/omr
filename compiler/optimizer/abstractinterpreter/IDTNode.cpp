@@ -23,11 +23,11 @@
 
 #define SINGLE_CHILD_BIT 1
 
-IDTNode::IDTNode(
+TR::IDTNode::IDTNode(
       int32_t idx, 
       TR_CallTarget* callTarget,
       TR::ResolvedMethodSymbol* symbol,
-      int32_t byteCodeIndex, 
+      uint32_t byteCodeIndex, 
       float callRatio, 
       IDTNode *parent, 
       int32_t budget) :
@@ -45,33 +45,27 @@ IDTNode::IDTNode(
    {   
    }
 
-IDTNode* IDTNode::addChild(
+TR::IDTNode* TR::IDTNode::addChild(
       int32_t idx,
       TR_CallTarget* callTarget,
       TR::ResolvedMethodSymbol* symbol,
-      int32_t byteCodeIndex, 
+      uint32_t byteCodeIndex, 
       float callRatio,
       TR::Region& region)
    {
-   if (_rootCallRatio * callRatio * 100 < 25) // do not add to the IDT if the root call ratio is less than 0.25
-      return NULL;
-
    int32_t budget =  getBudget() - callTarget->_calleeMethod->maxBytecodeIndex();
    
-   if (budget < 0)
-      return NULL;
-
    // The case where there is no children
    if (getNumChildren() == 0)
       {
-      IDTNode* newNode = new (region) IDTNode(
-                           idx, 
-                           callTarget,
-                           symbol,
-                           byteCodeIndex, 
-                           callRatio,
-                           this,
-                           budget);
+      TR::IDTNode* newNode = new (region) TR::IDTNode(
+                                                idx, 
+                                                callTarget,
+                                                symbol,
+                                                byteCodeIndex, 
+                                                callRatio,
+                                                this,
+                                                budget);
 
       setOnlyChild(newNode);
       return newNode;
@@ -80,40 +74,40 @@ IDTNode* IDTNode::addChild(
    // The case when there is 1 child
    if (getNumChildren() == 1)
       {
-      IDTNode* onlyChild = getOnlyChild();
-      _children = new (region) IDTNodeDeque(region); 
+      TR::IDTNode* onlyChild = getOnlyChild();
+      _children = new (region) TR::IDTNodeDeque(region); 
       _children->push_back(onlyChild);
       }
 
-   IDTNode *newChild = new (region) IDTNode(
-                        idx, 
-                        callTarget,
-                        symbol,
-                        byteCodeIndex, 
-                        callRatio,
-                        this, 
-                        budget);
+   TR::IDTNode *newChild = new (region) TR::IDTNode(
+                                       idx, 
+                                       callTarget,
+                                       symbol,
+                                       byteCodeIndex, 
+                                       callRatio,
+                                       this, 
+                                       budget);
                      
    _children->push_back(newChild);
    return _children->back();
    }
 
-int32_t IDTNode::getNumDescendants()
+uint32_t TR::IDTNode::getNumDescendants()
    {
-   int32_t numChildren = getNumChildren();
-   int32_t sum = 0;
-   for (int32_t i =0; i < numChildren; i ++)
+   const uint32_t numChildren = getNumChildren();
+   uint32_t sum = 0;
+   for (uint32_t i =0; i < numChildren; i ++)
       {
       sum += 1 + getChild(i)->getNumDescendants(); 
       }
    return sum;
    }
 
-int32_t IDTNode::getRecursiveCost() 
+uint32_t TR::IDTNode::getRecursiveCost() 
    {
-   int32_t numChildren = getNumChildren();
-   int32_t cost = getCost();
-   for (int32_t i = 0; i < numChildren; i ++)
+   const uint32_t numChildren = getNumChildren();
+   uint32_t cost = getCost();
+   for (uint32_t i = 0; i < numChildren; i ++)
       {
       IDTNode *child = getChild(i);
       cost += child->getRecursiveCost();
@@ -122,8 +116,7 @@ int32_t IDTNode::getRecursiveCost()
    return cost;
    }
 
-
-int32_t IDTNode::getNumChildren()
+uint32_t TR::IDTNode::getNumChildren()
    {
    if (_children == NULL)
       return 0;
@@ -135,13 +128,9 @@ int32_t IDTNode::getNumChildren()
    return num;
    }
 
-IDTNode* IDTNode::getChild(int32_t index)
+TR::IDTNode* TR::IDTNode::getChild(uint32_t index)
    {
-   int32_t numChildren = getNumChildren();
-   
-   if (numChildren == 0)
-      return NULL;
-
+   const uint32_t numChildren = getNumChildren();
    TR_ASSERT_FATAL(index < numChildren, "Child index out of range!\n");
 
    if (index == 0 && numChildren == 1) // only one child
@@ -150,31 +139,27 @@ IDTNode* IDTNode::getChild(int32_t index)
    return _children->at(index);
    }
 
-int32_t IDTNode::getBenefit()
+uint32_t TR::IDTNode::getBenefit()
    {
-   float benefit = _rootCallRatio  * (1 + _staticBenefit);
-   if (benefit < 0.5)
-      benefit = 0;
-
-   benefit *= 10; 
+   float benefit = _rootCallRatio  * (1 + _staticBenefit) * 10;
    return benefit;
    }
 
-IDTNode* IDTNode::findChildWithBytecodeIndex(int32_t bcIndex)
+TR::IDTNode* TR::IDTNode::findChildWithBytecodeIndex(uint32_t bcIndex)
    {
-   int32_t size = getNumChildren();
+   const uint32_t size = getNumChildren();
    
    if (size == 0)
       return NULL;
    
    if (size == 1)
       {
-      IDTNode* onlyChild = getOnlyChild();
+      TR::IDTNode* onlyChild = getOnlyChild();
       return onlyChild->getByteCodeIndex() == bcIndex ? onlyChild : NULL;
       }
    
-   IDTNode* child = NULL;
-   for (int32_t i = 0; i < size; i ++)
+   TR::IDTNode* child = NULL;
+   for (uint32_t i = 0; i < size; i ++)
       {
       
       if (_children->at(i)->getByteCodeIndex() == bcIndex)
@@ -184,17 +169,16 @@ IDTNode* IDTNode::findChildWithBytecodeIndex(int32_t bcIndex)
    return NULL;
    }
 
-
-IDTNode* IDTNode::getOnlyChild()
+TR::IDTNode* TR::IDTNode::getOnlyChild()
    {
    if (((uintptr_t)_children) & SINGLE_CHILD_BIT)
-      return (IDTNode *)((uintptr_t)(_children) & ~SINGLE_CHILD_BIT);
+      return (TR::IDTNode *)((uintptr_t)(_children) & ~SINGLE_CHILD_BIT);
    return NULL;
    }
 
-void IDTNode::setOnlyChild(IDTNode* child)
+void TR::IDTNode::setOnlyChild(TR::IDTNode* child)
    {
    TR_ASSERT_FATAL(!((uintptr_t)child & SINGLE_CHILD_BIT), "Maligned memory address.\n");
-   _children = (IDTNodeDeque*)((uintptr_t)child | SINGLE_CHILD_BIT);
+   _children = (TR::IDTNodeDeque*)((uintptr_t)child | SINGLE_CHILD_BIT);
    }
 

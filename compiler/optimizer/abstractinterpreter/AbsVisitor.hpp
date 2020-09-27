@@ -25,13 +25,16 @@
 #include "optimizer/CallInfo.hpp"
 #include "optimizer/abstractinterpreter/AbsState.hpp"
 
+namespace TR {
+
 /*
  * AbsVisitor enables users to define customized callback methods for abstract interpretation.
  */
 class AbsVisitor
    {
    public:
-   virtual void visitCallSite(TR_CallSite* callSite, int32_t callerIndex, TR::Block* callBlock, AbsArguments* arguments) {}
+   virtual void visitCallSite(TR_CallSite* callSite, int32_t callerIndex, TR::Block* callBlock, TR::AbsArguments* arguments) {}
    };
+}
 
 #endif
