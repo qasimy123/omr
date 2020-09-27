@@ -30,6 +30,7 @@
 #include "il/ResolvedMethodSymbol.hpp"
 #include <queue>
 
+namespace TR {
 /**
  * IDT stands for Inlining Dependency Tree
  * It is a data structure that holds all candidate methods to be inlined. 
@@ -41,7 +42,7 @@ class IDT
    public:
    IDT(TR::Region& region, TR_CallTarget*, TR::ResolvedMethodSymbol* symbol, int32_t budget, TR::Compilation* comp);
 
-   IDTNode* getRoot() { return _root; };
+   TR::IDTNode* getRoot() { return _root; };
 
    TR::Region& getRegion() { return _region; }
    
@@ -50,19 +51,7 @@ class IDT
     *
     * @return int32_t
     */
-   int32_t getNumNodes() { return _maxIdx + 1; }
-
-   /**
-    * @brief Copy the descendants of fromNode and add them as the descents of toNode
-    * Note: fromNode and toNode must be the same method.
-    * Otherwise, it does not make any sense.
-    * 
-    * @param fromNode IDTNode*
-    * @param toNode IDTNode*
-    * 
-    * @return void
-    */
-   void copyDescendants(IDTNode* fromNode, IDTNode* toNode);
+   uint32_t getNumNodes() { return _maxIdx + 1; }
    
    /**
     * @brief Get the next avaible IDTNode index.
@@ -85,15 +74,12 @@ class IDT
     *
     * @return IDTNode*
     */
-   IDTNode *getNodeByGlobalIndex(int32_t index);
+   TR::IDTNode *getNodeByGlobalIndex(int32_t index);
    
    /**
-    * @brief Flatten all the IDTNodes in this IDT into a list. 
-    * Therefore, IDTNode can be accessed by using its global node index.
-    * 
-    * @return void
+    * @brief Flatten all the IDTNodes into a list and calculate the static benefit of each node.
     */
-   void buildIndices();
+   void updateAndFlattenIDT();
 
    void printTrace();
 
@@ -104,8 +90,8 @@ class IDT
    TR::Compilation *_comp;
    TR::Region&  _region;
    int32_t _maxIdx;
-   IDTNode* _root;
-   IDTNode** _indices;
+   TR::IDTNode* _root;
+   TR::IDTNode** _indices;
    };
 
 /**
@@ -114,15 +100,15 @@ class IDT
 class IDTPreorderPriorityQueue
    {
    public:
-   IDTPreorderPriorityQueue(IDT* idt, TR::Region& region);
-   int32_t size() { return _idt->getNumNodes(); }
+   IDTPreorderPriorityQueue(TR::IDT* idt, TR::Region& region);
+   uint32_t size() { return _idt->getNumNodes(); }
 
-   IDTNode* get(int32_t index);
+   TR::IDTNode* get(uint32_t index);
 
    private:
 
    struct IDTNodeCompare {
-      bool operator()(IDTNode *left, IDTNode *right)
+      bool operator()(TR::IDTNode *left, TR::IDTNode *right)
          {
          TR_ASSERT_FATAL(left && right, "Comparing against null");
          return left->getCost() < right->getCost() || left->getBenefit() < right->getBenefit();
@@ -132,8 +118,10 @@ class IDTPreorderPriorityQueue
    typedef TR::vector<IDTNode*, TR::Region&> IDTNodeVector;
    typedef std::priority_queue<IDTNode*, IDTNodeVector, IDTNodeCompare> IDTNodePriorityQueue;
    
-   IDT* _idt;
+   TR::IDT* _idt;
    IDTNodePriorityQueue _pQueue;
    IDTNodeVector _entries;
    };
+}
+
 #endif

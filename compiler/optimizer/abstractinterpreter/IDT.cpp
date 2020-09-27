@@ -21,7 +21,7 @@
 
 #include "optimizer/abstractinterpreter/IDT.hpp"
 
-IDT::IDT(TR::Region& region, TR_CallTarget* callTarget, TR::ResolvedMethodSymbol* symbol, int32_t budget, TR::Compilation* comp):
+TR::IDT::IDT(TR::Region& region, TR_CallTarget* callTarget, TR::ResolvedMethodSymbol* symbol, int32_t budget, TR::Compilation* comp):
       _region(region),
       _maxIdx(-1),
       _comp(comp),
@@ -31,7 +31,7 @@ IDT::IDT(TR::Region& region, TR_CallTarget* callTarget, TR::ResolvedMethodSymbol
    increaseGlobalIDTNodeIndex();
    }
 
-void IDT::printTrace()
+void TR::IDT::printTrace()
    {
    bool verboseInlining = comp()->getOptions()->getVerboseOption(TR_VerboseInlining);
    bool traceBIIDTGen = comp()->getOption(TR_TraceBIIDTGen);
@@ -41,7 +41,7 @@ void IDT::printTrace()
    
    // print header line
    char header[1024];
-   const int32_t candidates = getNumNodes() - 1;
+   const uint32_t candidates = getNumNodes() - 1;
    sprintf(header,"#IDT: %d candidate methods inlinable into %s with a budget %d", 
       candidates,
       getRoot()->getName(comp()->trMemory()),
@@ -59,13 +59,13 @@ void IDT::printTrace()
       }
 
    //print the IDT nodes in BFS
-   IDTNodeDeque idtNodeQueue(comp()->trMemory()->currentStackRegion());
+   TR::IDTNodeDeque idtNodeQueue(comp()->trMemory()->currentStackRegion());
 
    idtNodeQueue.push_back(getRoot());
 
    while (!idtNodeQueue.empty())
       {
-      IDTNode* currentNode = idtNodeQueue.front();
+      TR::IDTNode* currentNode = idtNodeQueue.front();
       idtNodeQueue.pop_front();
 
       int32_t index = currentNode->getGlobalIndex();
@@ -97,87 +97,64 @@ void IDT::printTrace()
          }
          
       //process children
-      for (int32_t i = 0; i < currentNode->getNumChildren(); i ++)
+      for (uint32_t i = 0; i < currentNode->getNumChildren(); i ++)
          idtNodeQueue.push_back(currentNode->getChild(i));
          
       }
          
    }
 
-void IDT::buildIndices()
+void TR::IDT::updateAndFlattenIDT()
    {
    if (_indices != NULL)
       return;
 
    //initialize nodes index array
-    int32_t numNodes = getNumNodes();
-   _indices = new (_region) IDTNode *[numNodes];
+   uint32_t numNodes = getNumNodes();
+   _indices = new (_region) TR::IDTNode *[numNodes];
 
-   memset(_indices, 0, sizeof(IDTNode*) * numNodes);
+   memset(_indices, 0, sizeof(TR::IDTNode*) * numNodes);
 
    //add all the descendents of the root node to the indices array
-   IDTNodeDeque idtNodeQueue(comp()->trMemory()->currentStackRegion());
+   TR::IDTNodeDeque idtNodeQueue(comp()->trMemory()->currentStackRegion());
    idtNodeQueue.push_back(getRoot());
 
    while (!idtNodeQueue.empty())
       {
-      IDTNode* currentNode = idtNodeQueue.front();
+      TR::IDTNode* currentNode = idtNodeQueue.front();
+      uint32_t staticBenefit = currentNode->getInliningMethodSummary() ? currentNode->getInliningMethodSummary()->getIndirectBenefit() : 0;
+
+      if (comp()->getOption(TR_TraceBISummary))
+         {
+         traceMsg(comp(), "\n## Inlining Method Summary for method %s:\n", currentNode->getName(comp()->trMemory()));
+         currentNode->getInliningMethodSummary()->trace(comp());
+         traceMsg(comp(), "\n");
+         }
+
+      currentNode->setStaticBenefit(staticBenefit);
+
       idtNodeQueue.pop_front();
 
-      int32_t calleeIndex = currentNode->getGlobalIndex();
-      TR_ASSERT_FATAL(_indices[calleeIndex+1] == 0, "Callee index not unique!\n");
+      const int32_t index = currentNode->getGlobalIndex();
+      TR_ASSERT_FATAL(_indices[index + 1] == 0, "Callee index not unique!\n");
 
-      _indices[calleeIndex + 1] = currentNode;
+      _indices[index + 1] = currentNode;
 
-      for (int32_t i = 0; i < currentNode->getNumChildren(); i ++)
+      for (uint32_t i = 0; i < currentNode->getNumChildren(); i ++)
          {
          idtNodeQueue.push_back(currentNode->getChild(i));
          }
       }
    }
 
-IDTNode *IDT::getNodeByGlobalIndex(int32_t index)
+TR::IDTNode *TR::IDT::getNodeByGlobalIndex(int32_t index)
    {
    TR_ASSERT_FATAL(_indices, "Call buildIndices() first");
    TR_ASSERT_FATAL(index < getNextGlobalIDTNodeIndex(), "Index out of range!");
    return _indices[index + 1];
    }
 
-void IDT::copyDescendants(IDTNode* fromNode, IDTNode* toNode)
-   {
-   TR_ASSERT_FATAL(
-      fromNode->getResolvedMethodSymbol()->getResolvedMethod()->getPersistentIdentifier() 
-      == toNode->getResolvedMethodSymbol()->getResolvedMethod()->getPersistentIdentifier(), 
-      "Copying different nodes is not allowed!");
-
-   for ( int32_t i =0 ; i < fromNode->getNumChildren(); i ++)
-      {
-      IDTNode* child = fromNode->getChild(i);
-
-      if (toNode->getBudget() - child->getCost() < 0)
-         continue;
-         
-
-      IDTNode* copiedChild = toNode->addChild(
-                           getNextGlobalIDTNodeIndex(),
-                           child->getCallTarget(),
-                           child->getResolvedMethodSymbol(),
-                           child->getByteCodeIndex(),
-                           child->getCallRatio(),
-                           getRegion()
-                           );
-      if (copiedChild)
-            {
-            increaseGlobalIDTNodeIndex();
-            copiedChild->setInliningMethodSummary(child->getInliningMethodSummary());
-            copiedChild->setStaticBenefit(child->getStaticBenefit());
-            copyDescendants(child, copiedChild);
-            }
-      }
-  
-   }
-
-IDTPreorderPriorityQueue::IDTPreorderPriorityQueue(IDT* idt, TR::Region& region)  :
+TR::IDTPreorderPriorityQueue::IDTPreorderPriorityQueue(TR::IDT* idt, TR::Region& region)  :
       _entries(region),
       _idt(idt),
       _pQueue(IDTNodeCompare(), IDTNodeVector(region))
@@ -185,14 +162,14 @@ IDTPreorderPriorityQueue::IDTPreorderPriorityQueue(IDT* idt, TR::Region& region)
    _pQueue.push(idt->getRoot());
    }
 
-IDTNode* IDTPreorderPriorityQueue::get(int32_t index)
+TR::IDTNode* TR::IDTPreorderPriorityQueue::get(uint32_t index)
    {
-   size_t entriesSize = _entries.size();
+   const size_t entriesSize = _entries.size();
 
    if (entriesSize > index) //already in entries
       return _entries.at(index);
 
-    int32_t idtSize = size();
+   const uint32_t idtSize = size();
 
    if (index > idtSize - 1)
       return NULL;
@@ -200,11 +177,11 @@ IDTNode* IDTPreorderPriorityQueue::get(int32_t index)
    //not in entries yet. Update entries.
    while (_entries.size() <= index) 
       {
-      IDTNode *newEntry = _pQueue.top();
+      TR::IDTNode *newEntry = _pQueue.top();
       _pQueue.pop();
 
       _entries.push_back(newEntry);
-      for ( int32_t j = 0; j < newEntry->getNumChildren(); j++)
+      for (uint32_t j = 0; j < newEntry->getNumChildren(); j++)
          {
          _pQueue.push(newEntry->getChild(j));
          }
@@ -212,3 +189,4 @@ IDTNode* IDTPreorderPriorityQueue::get(int32_t index)
 
    return _entries.at(index);
    }
+   
