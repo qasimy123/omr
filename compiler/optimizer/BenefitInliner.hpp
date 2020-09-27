@@ -19,8 +19,8 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#ifndef BENEFIT_INLINER
-#define BENEFIT_INLINER
+#ifndef BENEFIT_INLINER_INCL
+#define BENEFIT_INLINER_INCL
 
 #include "optimizer/Optimization.hpp"
 #include "optimizer/OptimizationManager.hpp"
@@ -28,6 +28,7 @@
 #include "optimizer/abstractinterpreter/IDT.hpp"
 #include "optimizer/abstractinterpreter/InliningProposal.hpp"
 
+namespace TR {
 class BenefitInlinerWrapper : public TR::Optimization
    {
    public:
@@ -60,14 +61,14 @@ class BenefitInlinerBase : public TR_InlinerBase
 
    virtual bool inlineCallTargets(TR::ResolvedMethodSymbol* symbol, TR_CallStack* callStack, TR_InnerPreexistenceInfo* info);
 
-   bool inlineIntoIDTNode(TR::ResolvedMethodSymbol *symbol, TR_CallStack *callStack, IDTNode *idtNode);
+   bool inlineIntoIDTNode(TR::ResolvedMethodSymbol *symbol, TR_CallStack *callStack, TR::IDTNode *idtNode);
 
    virtual bool supportsMultipleTargetInlining() { return false; };
    virtual bool analyzeCallSite(TR_CallStack * callStack, TR::TreeTop * callNodeTreeTop, TR::Node * parent, TR::Node * callNode, TR_CallTarget *calltargetToInline);
 
    TR::Region& region() { return _region; };
    
-   InliningProposal* _inliningProposal;
+   TR::InliningProposal* _inliningProposal;
 
    protected:
    TR::Region _region;
@@ -76,9 +77,9 @@ class BenefitInlinerBase : public TR_InlinerBase
 
    int32_t _budget;
 
-   IDT* _inliningDependencyTree;
+   TR::IDT* _inliningDependencyTree;
 
-   IDTNode* _nextIDTNodeToInlineInto;
+   TR::IDTNode* _nextIDTNodeToInlineInto;
    };
 
 class BenefitInliner : public BenefitInlinerBase
@@ -89,8 +90,10 @@ class BenefitInliner : public BenefitInlinerBase
       {};
 
    void buildInliningDependencyTree();
-
+   void updateInliningDependencyTree();
    void inlinerPacking();
    };
    
+}
+
 #endif
