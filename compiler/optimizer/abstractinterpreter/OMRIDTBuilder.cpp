@@ -37,16 +37,16 @@ TR::IDTBuilder* OMR::IDTBuilder::self()
 
 TR::IDT* OMR::IDTBuilder::buildIDT()
    {
-   bool traceBIIDTGen = comp()->getOption(TR_TraceBIIDTGen);
+   bool traceBIIDTGen = self()->comp()->getOption(TR_TraceBIIDTGen);
 
    if (traceBIIDTGen)
-      traceMsg(comp(), "\n+ IDTBuilder: Start building IDT |\n\n");
+      traceMsg(self()->comp(), "\n+ IDTBuilder: Start building IDT |\n\n");
 
    TR_ResolvedMethod* rootMethod = _rootSymbol->getResolvedMethod();
    TR_ByteCodeInfo bcInfo;
 
    //This is just a fake callsite to make ECS work.
-   TR_CallSite *rootCallSite = new (region()) TR_CallSite(
+   TR_CallSite *rootCallSite = new (self()->region()) TR_CallSite(
                                                 rootMethod,
                                                 NULL,
                                                 NULL,
@@ -60,9 +60,9 @@ TR::IDT* OMR::IDTBuilder::buildIDT()
                                                 _rootSymbol->getMethodKind() == TR::MethodSymbol::Kinds::Virtual || _rootSymbol->getMethodKind() == TR::MethodSymbol::Kinds::Interface ,
                                                 _rootSymbol->getMethodKind() == TR::MethodSymbol::Kinds::Interface,
                                                 bcInfo,
-                                                comp());
+                                                self()->comp());
                                                  
-   TR_CallTarget *rootCallTarget = new (region()) TR_CallTarget(
+   TR_CallTarget *rootCallTarget = new (self()->region()) TR_CallTarget(
                                     rootCallSite,
                                     _rootSymbol, 
                                     rootMethod, 
@@ -71,7 +71,7 @@ TR::IDT* OMR::IDTBuilder::buildIDT()
                                     NULL);
    
    //Initialize IDT
-   _idt = new (region()) TR::IDT(region(), rootCallTarget, _rootSymbol, _rootBudget, comp());
+   _idt = new (self()->region()) TR::IDT(self()->region(), rootCallTarget, _rootSymbol, _rootBudget, self()->comp());
    
    TR::IDTNode* root = _idt->getRoot();
 
@@ -82,45 +82,46 @@ TR::IDT* OMR::IDTBuilder::buildIDT()
       return _idt;
 
    //add the IDT decendants
-   self()->buildIDT2(root, NULL, -1, _rootBudget, NULL);
+   TR::AbsValue* returnVal = NULL;
+   self()->buildIDT2(root, NULL, &returnVal, -1, _rootBudget, NULL);
 
    if (traceBIIDTGen)
-      traceMsg(comp(), "\n+ IDTBuilder: Finish building TR::IDT |\n");
+      traceMsg(self()->comp(), "\n+ IDTBuilder: Finish building TR::IDT |\n");
 
    return _idt;
    }
 
-void OMR::IDTBuilder::buildIDT2(TR::IDTNode* node, TR::AbsArguments* arguments, int32_t callerIndex, int32_t budget, TR_CallStack* callStack)
+void OMR::IDTBuilder::buildIDT2(TR::IDTNode* node, TR::AbsArguments* arguments, TR::AbsValue** returnValue, int32_t callerIndex, int32_t budget, TR_CallStack* callStack)
    {
    TR::ResolvedMethodSymbol* symbol = node->getResolvedMethodSymbol();
    TR_ResolvedMethod* method = node->getResolvedMethod();
 
-   TR_CallStack* nextCallStack = new (region()) TR_CallStack(comp(), symbol, method, callStack, budget, true);
+   TR_CallStack* nextCallStack = new (self()->region()) TR_CallStack(self()->comp(), symbol, method, callStack, budget, true);
 
    TR::IDTBuilderVisitor visitor(self(), node, nextCallStack);
 
-   self()->performAbstractInterpretation(node, visitor, arguments, callerIndex);
+   self()->performAbstractInterpretation(node, visitor, arguments, returnValue, callerIndex);
    }
 
-void OMR::IDTBuilder::addNodesToIDT(TR::IDTNode*parent, int32_t callerIndex, TR_CallSite* callSite, float callRatio, TR::AbsArguments* arguments, TR_CallStack* callStack)
+void OMR::IDTBuilder::addNodesToIDT(TR::IDTNode*parent, int32_t callerIndex, TR_CallSite* callSite, float callRatio, TR::AbsArguments* arguments, TR::AbsValue** returnValue, TR_CallStack* callStack)
    {
    bool traceBIIDTGen = self()->comp()->getOption(TR_TraceBIIDTGen);
 
    if (callSite == NULL || callSite->_initialCalleeMethod == NULL)
       {
       if (traceBIIDTGen)
-         traceMsg(comp(), "Do not have a callsite. Don't add\n");
+         traceMsg(self()->comp(), "Do not have a callsite. Don't add\n");
       return;
       }
 
    if (callRatio * parent->getRootCallRatio() * 100 < 25)
       {
       if (traceBIIDTGen)
-         traceMsg(comp(), "Root call ratio < 0.25. Don't add\n");
+         traceMsg(self()->comp(), "Root call ratio < 0.25. Don't add\n");
       return;
       }
 
-   callSite->findCallSiteTarget(callStack, getInliner()); //Find all call targets
+   callSite->findCallSiteTarget(callStack, self()->getInliner()); //Find all call targets
 
    // eliminate call targets that are not inlinable according to the policy
    // thus they won't be added to TR::IDT 
@@ -129,7 +130,7 @@ void OMR::IDTBuilder::addNodesToIDT(TR::IDTNode*parent, int32_t callerIndex, TR_
    if (callSite->numTargets() == 0) 
       {
       if (traceBIIDTGen)
-         traceMsg(comp(), "Do not have a call target. Don't add\n");
+         traceMsg(self()->comp(), "Do not have a call target. Don't add\n");
       return;
       }
       
@@ -142,7 +143,7 @@ void OMR::IDTBuilder::addNodesToIDT(TR::IDTNode*parent, int32_t callerIndex, TR_
       if (remainingBudget < 0 ) // no budget remains
          {
          if (traceBIIDTGen)
-            traceMsg(comp(), "No budget left. Don't add\n");
+            traceMsg(self()->comp(), "No budget left. Don't add\n");
          continue;
          }
 
@@ -151,12 +152,12 @@ void OMR::IDTBuilder::addNodesToIDT(TR::IDTNode*parent, int32_t callerIndex, TR_
       if (isRecursiveCall) //Stop for recursive call
          {
          if (traceBIIDTGen)
-            traceMsg(comp(), "Recursive call. Don't add\n");  
+            traceMsg(self()->comp(), "Recursive call. Don't add\n");  
          continue;
          }
          
       // The actual symbol for the callTarget->_calleeMethod.
-      TR::ResolvedMethodSymbol* calleeMethodSymbol = TR::ResolvedMethodSymbol::create(comp()->trHeapMemory(), callTarget->_calleeMethod, comp());
+      TR::ResolvedMethodSymbol* calleeMethodSymbol = TR::ResolvedMethodSymbol::create(self()->comp()->trHeapMemory(), callTarget->_calleeMethod, self()->comp());
 
       // generate the CFG of this call target and set the block frequencies. 
       TR::CFG* cfg = self()->generateControlFlowGraph(callTarget);
@@ -169,7 +170,7 @@ void OMR::IDTBuilder::addNodesToIDT(TR::IDTNode*parent, int32_t callerIndex, TR_
          }
          
       if (traceBIIDTGen)
-         traceMsg(self()->comp(), "+ IDTBuilder: Adding a child Node: %s for TR::IDTNode: %s\n", calleeMethodSymbol->signature(comp()->trMemory()), parent->getName(comp()->trMemory()));
+         traceMsg(self()->comp(), "+ IDTBuilder: Adding a child Node: %s for TR::IDTNode: %s\n", calleeMethodSymbol->signature(self()->comp()->trMemory()), parent->getName(self()->comp()->trMemory()));
 
       TR::IDTNode* child = parent->addChild(
                               _idt->getNextGlobalIDTNodeIndex(),
@@ -186,17 +187,17 @@ void OMR::IDTBuilder::addNodesToIDT(TR::IDTNode*parent, int32_t callerIndex, TR_
          continue;
       
       // Build the IDT recursively
-      self()->buildIDT2(child, arguments, callerIndex + 1, child->getBudget(), callStack);
+      self()->buildIDT2(child, arguments, returnValue, callerIndex + 1, child->getBudget(), callStack);
 
       self()->comp()->decInlineDepth(true); 
       }
    }
 
-void TR::IDTBuilderVisitor::visitCallSite(TR_CallSite* callSite, int32_t callerIndex, TR::Block* callBlock, TR::AbsArguments* arguments)
+void TR::IDTBuilderVisitor::visitCallSite(TR_CallSite* callSite, int32_t callerIndex, TR::Block* callBlock, TR::AbsArguments* arguments, TR::AbsValue** returnValue)
    {
    if (callBlock->getFrequency() < 6 || callBlock->isCold() || callBlock->isSuperCold())
       return;
 
    float callRatio = (float)callBlock->getFrequency() / (float)_idtNode->getCallTarget()->_cfg->getStart()->asBlock()->getFrequency();
-   _idtBuilder->addNodesToIDT(_idtNode, callerIndex, callSite, callRatio, arguments, _callStack);
+   _idtBuilder->addNodesToIDT(_idtNode, callerIndex, callSite, callRatio, arguments, returnValue, _callStack);
    }

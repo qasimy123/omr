@@ -94,6 +94,9 @@ class BranchFoldingPredicate
       };
 
    static bool predicate(int32_t low, int32_t high, TR::BranchFoldingPredicate::Kind kind);
+
+   static bool takeTheBranch(int32_t low, int32_t high, TR::BranchFoldingPredicate::Kind kind);
+   static bool notTakeTheBranch(int32_t low, int32_t high, TR::BranchFoldingPredicate::Kind kind);
    };
 
 class NullBranchFoldingPredicate
@@ -106,24 +109,36 @@ class NullBranchFoldingPredicate
       };
 
    static bool predicate(TR_YesNoMaybe isNonNull, TR::NullBranchFoldingPredicate::Kind kind);
+
+   static bool takeTheBranch(TR_YesNoMaybe isNonNull, TR::NullBranchFoldingPredicate::Kind kind);
+   static bool notTakeTheBranch(TR_YesNoMaybe isNonNull, TR::NullBranchFoldingPredicate::Kind kind);
    };
 
 class NullCheckFoldingPredicate
    {
    public:
    static bool predicate(TR_YesNoMaybe isNonNull);
+
+   static bool removeNullCheck(TR_YesNoMaybe isNonNull);
+   static bool throwException(TR_YesNoMaybe isNonNull);
    };
 
 class InstanceOfFoldingPredicate 
    {
    public:
    static bool predicate(TR_YesNoMaybe isNonNull, TR_OpaqueClassBlock* instanceClass, bool isFixedClass, TR_OpaqueClassBlock* castClass, TR_FrontEnd* fe);
+
+   static bool foldToTrue(TR_YesNoMaybe isNonNull, TR_OpaqueClassBlock* instanceClass, bool isFixedClass, TR_OpaqueClassBlock* castClass, TR_FrontEnd* fe);
+   static bool foldToFalse(TR_YesNoMaybe isNonNull, TR_OpaqueClassBlock* instanceClass, bool isFixedClass, TR_OpaqueClassBlock* castClass, TR_FrontEnd* fe);
    };
 
 class CheckCastFoldingPredicate
    {
    public:
    static bool predicate(TR_YesNoMaybe isNonNull, TR_OpaqueClassBlock* checkClass, bool isFixedClass, TR_OpaqueClassBlock* castClass, TR_FrontEnd* fe);
+
+   static bool checkCastSucceed(TR_YesNoMaybe isNonNull, TR_OpaqueClassBlock* checkClass, bool isFixedClass, TR_OpaqueClassBlock* castClass, TR_FrontEnd* fe);
+   static bool throwException(TR_YesNoMaybe isNonNull, TR_OpaqueClassBlock* checkClass, bool isFixedClass, TR_OpaqueClassBlock* castClass, TR_FrontEnd* fe);
    };
 
 }

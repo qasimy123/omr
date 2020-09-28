@@ -27,121 +27,243 @@ void TR::PotentialOptimization::trace(TR::Compilation* comp)
    }
 
 const char* TR::PotentialOptimization::getOptKindName()
-    {
-    switch (_optKind)
-        {
-        case BranchFolding: return "Branch Folding";
-        case NullCheckFolding: return "NullCheck Folding";
-        case InstanceOfFolding: return "InstanceOf Folding";
-        case CheckCastFolding: return "CheckCast Folding";
-        default: TR_ASSERT_FATAL(false, "Unexpected type");
-        }
-    }
+   {
+   switch (_optKind)
+      {
+      case BranchFolding: return "Branch Folding";
+      case NullCheckFolding: return "NullCheck Folding";
+      case InstanceOfFolding: return "InstanceOf Folding";
+      case CheckCastFolding: return "CheckCast Folding";
+      default: TR_ASSERT_FATAL(false, "Unexpected type");
+      }
+   }
 
 void TR::InliningMethodSummary::trace(TR::Compilation* comp)
-    {
-    traceMsg(comp, "Total %d Potential Optimizations will be unlocked if inlining this method\n", _opts.size());
-    for (uint32_t i = 0; i < _opts.size(); i ++)
-        {
-        _opts[i]->trace(comp);
-        }
-    }
+   {
+   traceMsg(comp, "Total %d Potential Optimizations will be unlocked if inlining this method\n", _opts.size());
+   for (uint32_t i = 0; i < _opts.size(); i ++)
+      {
+      _opts[i]->trace(comp);
+      }
+   }
 
 bool TR::BranchFoldingPredicate::predicate(int32_t low, int32_t high, TR::BranchFoldingPredicate::Kind kind)
-    {
-    switch (kind)
-        {
-        case IfEq:
-            {
-            if ((low == high && low == 0) || low >= 1 || high <= -1)
-                return true;
+   {
+   return takeTheBranch(low, high, kind) || notTakeTheBranch(low, high, kind);
+   }
 
-            return false;
-            }
-        case IfNe:
-            {
-            if ((low == high && low == 0) || low >= 1 || high <= -1 )
-                return true;
+bool TR::BranchFoldingPredicate::takeTheBranch(int32_t low, int32_t high, TR::BranchFoldingPredicate::Kind kind)
+   {
+   switch (kind)
+      {
+      case IfEq:
+         {
+         if (low == high && low == 0) 
+            return true;
 
-            return false;
-            }
-        case IfGe:
-            {
-            if (low >= 0 || high <= -1)
-                return true;
+         return false;
+         }
+      case IfNe:
+         {
+         if (low >= 1 || high <= -1 )
+            return true;
 
-            return false;
-            }
-        case IfLe:
-            {
-            if (high <= 0 || low >= 1)
-                return true;
-            
-            return false;
-            }
-        case IfLt:
-            {
-            if (high <= -1 || low >= 0)
-                return true;
+         return false;
+         }
+      case IfGe:
+         {
+         if (low >= 0)
+            return true;
 
-            return false;
-            }
-        case IfGt:
-            {
-            if (high <= 0 || low >= 1)
-                return true;
+         return false;
+         }
+      case IfLe:
+         {
+         if (high <= 0)
+            return true;
+         
+         return false;
+         }
+      case IfLt:
+         {
+         if (high <= -1)
+            return true;
 
-            return false;
-            }
-        default: TR_ASSERT_FATAL(false, "Unexpected type");
-        }
-    }
+         return false;
+         }
+      case IfGt:
+         {
+         if (low >= 1)
+            return true;
+
+         return false;
+         }
+      default: TR_ASSERT_FATAL(false, "Unexpected type");
+      }
+   }
+
+bool TR::BranchFoldingPredicate::notTakeTheBranch(int32_t low, int32_t high, TR::BranchFoldingPredicate::Kind kind)
+   {
+   switch (kind)
+      {
+      case IfEq:
+         {
+         if (low >= 1 || high <= -1)
+            return true;
+
+         return false;
+         }
+      case IfNe:
+         {
+         if (low == high && low == 0)
+            return true;
+
+         return false;
+         }
+      case IfGe:
+         {
+         if (high <= -1)
+            return true;
+
+         return false;
+         }
+      case IfLe:
+         {
+         if (low >= 1)
+            return true;
+         
+         return false;
+         }
+      case IfLt:
+         {
+         if (low >= 0)
+            return true;
+
+         return false;
+         }
+      case IfGt:
+         {
+         if (high <= 0)
+            return true;
+
+         return false;
+         }
+      default: TR_ASSERT_FATAL(false, "Unexpected type");
+      }
+   }
+
+bool TR::NullBranchFoldingPredicate::takeTheBranch(TR_YesNoMaybe isNonNull, Kind kind)
+   {
+   if ((isNonNull == TR_yes && kind == IfNonNull) || (isNonNull == TR_no && kind == IfNull))
+      return true;
+
+   return false;
+   }
+
+bool TR::NullBranchFoldingPredicate::notTakeTheBranch(TR_YesNoMaybe isNonNull, Kind kind)
+   {
+   if ((isNonNull == TR_yes && kind == IfNull) || (isNonNull == TR_no && kind == IfNonNull))
+      return true;
+   
+   return false;
+   }
 
 bool TR::NullBranchFoldingPredicate::predicate(TR_YesNoMaybe isNonNull, Kind kind)
-    {
-    if (isNonNull != TR_maybe)
-        return true;
+   {
+   if (takeTheBranch(isNonNull, kind) || notTakeTheBranch(isNonNull, kind))
+      return true;
 
-    return false;
-    }
+   return false;
+   }
+
+bool TR::NullCheckFoldingPredicate::removeNullCheck(TR_YesNoMaybe isNonNull)
+   {
+   return isNonNull == TR_yes;
+   }
+
+bool TR::NullCheckFoldingPredicate::throwException(TR_YesNoMaybe isNonNull)
+   {
+   return isNonNull == TR_no;
+   }
 
 bool TR::NullCheckFoldingPredicate::predicate(TR_YesNoMaybe isNonNull)
-    {
-    if (isNonNull != TR_maybe)
-        return true;
+   {
+   if (removeNullCheck(isNonNull) || throwException(isNonNull))
+      return true;
 
-    return false;
-    }
+   return false;
+   }
+
+bool TR::InstanceOfFoldingPredicate::foldToTrue(TR_YesNoMaybe isNonNull, TR_OpaqueClassBlock* instanceClass, bool isFixedClass, TR_OpaqueClassBlock* castClass, TR_FrontEnd* fe)
+   {
+   if (!instanceClass || !castClass)
+      return false;
+
+   TR_YesNoMaybe isInstance = fe->isInstanceOf(instanceClass, castClass, isFixedClass, true);
+
+   if (isInstance == TR_yes)
+      return true;
+
+   return false;
+   }
+
+bool TR::InstanceOfFoldingPredicate::foldToFalse(TR_YesNoMaybe isNonNull, TR_OpaqueClassBlock* instanceClass, bool isFixedClass, TR_OpaqueClassBlock* castClass, TR_FrontEnd* fe)
+   {
+   if (isNonNull == TR_no) //instanceof null
+      return true;
+
+   if (!instanceClass || !castClass)
+      return false;
+
+   TR_YesNoMaybe isInstance = fe->isInstanceOf(instanceClass, castClass, isFixedClass, true);
+
+   if (isInstance == TR_no)
+      return true;
+
+   return false;
+   }
 
 bool TR::InstanceOfFoldingPredicate::predicate(TR_YesNoMaybe isNonNull, TR_OpaqueClassBlock* instanceClass, bool isFixedClass, TR_OpaqueClassBlock* castClass, TR_FrontEnd* fe)
-    {
-    if (isNonNull == TR_no) //instanceof null
-        return true;
-        
+   {
+   if (foldToTrue(isNonNull, instanceClass, isFixedClass, castClass, fe) || foldToFalse(isNonNull, instanceClass, isFixedClass, castClass, fe))
+      return true;
 
-    if (!instanceClass || !castClass)
-        return false;
+   return false;
+   }
 
-    TR_YesNoMaybe isInstance = fe->isInstanceOf(instanceClass, castClass, isFixedClass, true);
+bool TR::CheckCastFoldingPredicate::checkCastSucceed(TR_YesNoMaybe isNonNull, TR_OpaqueClassBlock* checkClass, bool isFixedClass, TR_OpaqueClassBlock* castClass, TR_FrontEnd* fe)
+   {
+   if (isNonNull == TR_no) //checkcast null
+      return true;
 
-    if (isInstance != TR_maybe)
-        return true;
+   if (!checkClass || !castClass)
+      return false;
 
-    return false;
-    }
+   TR_YesNoMaybe isInstance = fe->isInstanceOf(checkClass, castClass, isFixedClass, true);
+
+   if (isInstance == TR_yes)
+      return true;
+
+   return false;
+   }
+
+bool TR::CheckCastFoldingPredicate::throwException(TR_YesNoMaybe isNonNull, TR_OpaqueClassBlock* checkClass, bool isFixedClass, TR_OpaqueClassBlock* castClass, TR_FrontEnd* fe)
+   {
+   if (!checkClass || !castClass)
+      return false;
+
+   TR_YesNoMaybe isInstance = fe->isInstanceOf(checkClass, castClass, isFixedClass, true);
+
+   if (isInstance == TR_no)
+      return true;
+
+   return false;
+   }
 
 bool TR::CheckCastFoldingPredicate::predicate(TR_YesNoMaybe isNonNull, TR_OpaqueClassBlock* checkClass, bool isFixedClass, TR_OpaqueClassBlock* castClass, TR_FrontEnd* fe)
-    {
-    if (isNonNull == TR_no) //checkcast null
-        return true;
-        
-    if (!checkClass || !castClass)
-        return false;
-
-    TR_YesNoMaybe isInstance = fe->isInstanceOf(checkClass, castClass, isFixedClass, true);
-
-    if (isInstance != TR_maybe)
-        return true;
-        
-    return false;
-    }
+   {
+   if (checkCastSucceed(isNonNull, checkClass, isFixedClass, castClass, fe) || throwException(isNonNull, checkClass, isFixedClass, castClass, fe))
+      return true;
+      
+   return false;
+   }

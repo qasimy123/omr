@@ -95,7 +95,7 @@ class IDTBuilder
     * @param arguments the arguments are the AbsValues passed from the caller method.
     * @param callerIndex the caller index
     */
-   void performAbstractInterpretation(TR::IDTNode* node, TR::IDTBuilderVisitor& visitor, TR::AbsArguments* arguments, int32_t callerIndex) { TR_UNIMPLEMENTED(); }
+   void performAbstractInterpretation(TR::IDTNode* node, TR::IDTBuilderVisitor& visitor, TR::AbsArguments* arguments, TR::AbsValue** returnValue, int32_t callerIndex) { TR_UNIMPLEMENTED(); }
 
    /**
     * @param node the node to build a sub IDT for
@@ -104,7 +104,7 @@ class IDTBuilder
     * @param budget the budget for the sub IDT
     * @param callStack the call stack
     */
-   void buildIDT2(TR::IDTNode* node, TR::AbsArguments* arguments, int32_t callerIndex, int32_t budget, TR_CallStack* callStack);
+   void buildIDT2(TR::IDTNode* node, TR::AbsArguments* arguments, TR::AbsValue** returnValue, int32_t callerIndex, int32_t budget, TR_CallStack* callStack);
    
    /**
     * @brief add IDTNode(s) to the IDT
@@ -118,7 +118,7 @@ class IDTBuilder
     * 
     * @return void
     */
-   void addNodesToIDT(TR::IDTNode* parent, int32_t callerIndex, TR_CallSite* callSite, float callRatio, TR::AbsArguments* arguments, TR_CallStack* callStack);
+   void addNodesToIDT(TR::IDTNode* parent, int32_t callerIndex, TR_CallSite* callSite, float callRatio, TR::AbsArguments* arguments, TR::AbsValue** returnValue, TR_CallStack* callStack);
    
    TR::IDT* _idt;
    TR::ResolvedMethodSymbol* _rootSymbol;
@@ -141,7 +141,7 @@ class IDTBuilderVisitor : public TR::AbsVisitor
          _callStack(callStack)
       {}
       
-   virtual void visitCallSite(TR_CallSite* callSite, int32_t callerIndex, TR::Block* callBlock, TR::AbsArguments* arguments);
+   virtual void visitCallSite(TR_CallSite* callSite, int32_t callerIndex, TR::Block* callBlock, TR::AbsArguments* arguments, TR::AbsValue** returnValue);
 
    private:
    TR::IDTBuilder* _idtBuilder;
