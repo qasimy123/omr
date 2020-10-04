@@ -27,12 +27,12 @@
 
 
 /**
- * Steps of TR::BenefitInliner:
+ * Steps of BenefitInliner:
  * 
  * 
- * 1. perform() --> 2. build IDT -->  3. abstract interpretation  -->  4. update IDT --> 5. run inliner packing (nested knapsack) --> 6. perform inlining
- *                  |                                          |
- *                  |------------- build IDT ------------------| 
+ 1. perform() --> 2. build IDT -->  3. abstract interpretation  -->  5. run inliner packing (nested knapsack) --> 6. perform inlining
+ *                  |                                                |
+ *                  |--  4. update IDT with inlining summaries --    | 
  *
  * 
  * Note: Abstract Interpretation is part of the IDT building process. Check the IDTBuilder.
@@ -43,7 +43,6 @@ int32_t TR::BenefitInlinerWrapper::perform()
    TR::BenefitInliner inliner(optimizer(), this);
 
    inliner.buildInliningDependencyTree(); // IDT
-   inliner.updateInliningDependencyTree(); // update IDT Node's benefit
    inliner.inlinerPacking(); // nested knapsack
    inliner.performInlining(comp()->getMethodSymbol());
 
@@ -54,11 +53,6 @@ void TR::BenefitInliner::buildInliningDependencyTree()
    {
    TR::IDTBuilder builder(comp()->getMethodSymbol(), _budget, region(), comp(), this);
    _inliningDependencyTree = builder.buildIDT();
-   }
-
-void TR::BenefitInliner::updateInliningDependencyTree()
-   {
-   _inliningDependencyTree->updateAndFlattenIDT();
 
    if (comp()->getOption(TR_TraceBIIDTGen))
       _inliningDependencyTree->printTrace();
@@ -68,6 +62,8 @@ void TR::BenefitInliner::updateInliningDependencyTree()
 
 void TR::BenefitInliner::inlinerPacking()
    {
+   _inliningDependencyTree->flattenIDT();
+
    const int32_t idtSize = _inliningDependencyTree->getNumNodes();
    const int32_t budget = _budget;
 
@@ -133,7 +129,7 @@ int32_t TR::BenefitInlinerBase::getInliningBudget(TR::ResolvedMethodSymbol* call
       budget = std::max(1500, size * 2);
    else if (comp()->getMethodHotness() >= hot)
       budget = std::max(1500, size + (size >> 2));
-   else if (comp()->getMethodHotness() >= warm && size < 125)
+   else if (comp()->getMethodHotness() >= warm && size < 250)
       budget = 250;
    else if (comp()->getMethodHotness() >= warm && size < 700)
       budget = std::max(700, size + (size >> 2));
@@ -151,7 +147,7 @@ bool TR::BenefitInlinerBase::inlineCallTargets(TR::ResolvedMethodSymbol *symbol,
       return false;
 
    if (comp()->trace(OMR::inlining))
-      traceMsg(comp(), "#TR::BenefitInliner: inlining into %s\n", _nextIDTNodeToInlineInto->getName(comp()->trMemory()));
+      traceMsg(comp(), "#BenefitInliner: inlining into %s\n", _nextIDTNodeToInlineInto->getName(comp()->trMemory()));
 
    TR_CallStack callStack(comp(), symbol, symbol->getResolvedMethod(), prevCallStack, 1500, true);
 
