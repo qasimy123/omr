@@ -90,7 +90,6 @@ class BenefitInliner : public BenefitInlinerBase
       {};
 
    void buildInliningDependencyTree();
-   void updateInliningDependencyTree();
    void inlinerPacking();
    };
    
