@@ -72,8 +72,6 @@ class IDTBuilder
    TR::Region& region() { return _region; };
    TR_InlinerBase* getInliner()  { return _inliner; };
 
-   private:
-
    /**
     * @brief generate the control flow graph of a call target so that the abstract interpretation can use. 
     * 
@@ -119,9 +117,18 @@ class IDTBuilder
     * @return void
     */
    void addNodesToIDT(TR::IDTNode* parent, int32_t callerIndex, TR_CallSite* callSite, float callRatio, TR::AbsArguments* arguments, TR_CallStack* callStack);
+
+   TR::IDTNode* checkIfMethodIsInterpreted(TR_ResolvedMethod* method);
+   void storeInterpretedMethod(TR_ResolvedMethod* method, TR::IDTNode* node);
+   
+   uint32_t computeStaticBenefit(TR::InliningMethodSummary* summary, TR::AbsArguments* arguments);
    
    TR::IDT* _idt;
    TR::ResolvedMethodSymbol* _rootSymbol;
+
+   typedef TR::typed_allocator<std::pair<TR_OpaqueMethodBlock*, TR::IDTNode*>, TR::Region&> InterpretedMethodMapAllocator;
+   typedef std::less<TR_OpaqueMethodBlock*> InterpretedMethodMapComparator;
+   std::map<TR_OpaqueMethodBlock *, TR::IDTNode*, InterpretedMethodMapComparator, InterpretedMethodMapAllocator> _interpretedMethodMap;
 
    int32_t _rootBudget;
    TR::Region& _region;

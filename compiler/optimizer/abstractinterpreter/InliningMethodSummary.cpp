@@ -21,127 +21,137 @@
 
 #include "optimizer/abstractinterpreter/InliningMethodSummary.hpp"
 
-void TR::PotentialOptimization::trace(TR::Compilation* comp)
+uint32_t TR::InliningMethodSummary::testArgument(TR::AbsValue* arg, uint32_t argPos)
    {
-   traceMsg(comp, "Potential Optimization: %s at bytecode Index: %d in method %s\n", getOptKindName(), _bytecodeIndex, _symbol->signature(comp->trMemory()));
+   TR_ASSERT_FATAL(arg, "Arg cannot be NULL");
+
+   if (arg->isTop())
+      return 0;
+
+   if (_optsByArg.size() <= argPos || _optsByArg[argPos] == NULL || _optsByArg[argPos]->size() == 0)
+      return 0;
+   
+   uint32_t benefit = 0;
+
+   for (size_t i = 0; i < _optsByArg[argPos]->size(); i ++)
+      {
+      TR::PotentialOptimizationPredicate* predicate = _optsByArg[argPos]->at(i);
+      if (predicate->test(arg))
+         {
+         benefit += 1;
+         }
+      }
+
+   return benefit;
    }
 
-const char* TR::PotentialOptimization::getOptKindName()
-    {
-    switch (_optKind)
-        {
-        case BranchFolding: return "Branch Folding";
-        case NullCheckFolding: return "NullCheck Folding";
-        case InstanceOfFolding: return "InstanceOf Folding";
-        case CheckCastFolding: return "CheckCast Folding";
-        default: TR_ASSERT_FATAL(false, "Unexpected type");
-        }
-    }
-
 void TR::InliningMethodSummary::trace(TR::Compilation* comp)
-    {
-    traceMsg(comp, "Total %d Potential Optimizations will be unlocked if inlining this method\n", _opts.size());
-    for (uint32_t i = 0; i < _opts.size(); i ++)
-        {
-        _opts[i]->trace(comp);
-        }
-    }
+   {
+   traceMsg(comp, "{{{ Inlining Method Summary }}}\n");
 
-bool TR::BranchFoldingPredicate::predicate(int32_t low, int32_t high, TR::BranchFoldingPredicate::Kind kind)
-    {
-    switch (kind)
-        {
-        case IfEq:
+   if (_optsByArg.size() == 0)
+      {
+      traceMsg(comp, "EMPTY\n\n");
+      return;
+      }
+
+   traceMsg(comp, "\n\n");
+
+   for (size_t i = 0; i < _optsByArg.size(); i ++) 
+      {
+      if (_optsByArg[i] != NULL)
+         {
+         for (size_t j = 0; j < _optsByArg[i]->size(); j ++)
             {
-            if ((low == high && low == 0) || low >= 1 || high <= -1)
-                return true;
+            TR::PotentialOptimizationPredicate* predicate = _optsByArg[i]->at(j);
 
-            return false;
+            traceMsg(comp, "%s @%d for Argument %d ", predicate->getName(), predicate->getBytecodeIndex(), i);
+            predicate->trace(comp);
+            traceMsg(comp, "\n");
             }
-        case IfNe:
-            {
-            if ((low == high && low == 0) || low >= 1 || high <= -1 )
-                return true;
+         }
+      }
 
+   traceMsg(comp, "----------------------------------------------\n\n");
+   }
+
+
+void TR::InliningMethodSummary::addPotentialOptimizationByArgument(TR::PotentialOptimizationPredicate* predicate, uint32_t argPos)
+   {
+   if (_optsByArg.size() <= argPos)
+      _optsByArg.resize(argPos + 1);
+      
+   if (!_optsByArg[argPos])
+       _optsByArg[argPos] = new (region()) PredicateContainer(region());
+      
+   _optsByArg[argPos]->push_back(predicate);
+   }
+
+const char* TR::PotentialOptimizationPredicate::getName()
+   {
+   switch (_kind)
+      {
+      case Kind::BranchFolding:
+         return "Branch Folding";
+      case Kind::CheckCastFolding:
+         return "CheckCast Folding";
+      case Kind::NullCheckFolding:
+         return "NullCheck Folding";
+      case Kind::InstanceOfFolding:
+         return "InstanceOf Folding";
+      default:
+         TR_ASSERT_FATAL(false, "Unexpected Kind");
+      }
+   }
+
+bool TR::PotentialOptimizationVPPredicate::holdPartialOrderRelation(TR::VPConstraint* valueConstraint, TR::VPConstraint* testConstraint)  
+   {
+   if (testConstraint->asIntConstraint()) //partial relation for int constraint
+      {
+      if (valueConstraint->asIntConstraint() && testConstraint->getLowInt() <= valueConstraint->getLowInt() && testConstraint->getHighInt() >= valueConstraint->getHighInt()) 
+         return true;
+      else 
+         return false;
+      }
+   else if (testConstraint->asClassPresence()) //partial relation for nullness
+      {
+      if (testConstraint->isNonNullObject() && valueConstraint->isNonNullObject())
+         return true;
+      else if (testConstraint->isNullObject() && valueConstraint->isNullObject())
+         return true;
+      else 
+         return false;
+      }
+   else if (testConstraint->asClassType()) //partial relation for class types
+      {
+      if (valueConstraint->isNullObject() && valueConstraint->asClass() && valueConstraint->getClass())
+         {
+         TR_YesNoMaybe yesNoMaybe = _vp->fe()->isInstanceOf(valueConstraint->getClass(), testConstraint->getClass(), valueConstraint->isFixedClass(), true);
+
+         if (yesNoMaybe != TR_maybe)
+            return true;
+         else 
             return false;
-            }
-        case IfGe:
-            {
-            if (low >= 0 || high <= -1)
-                return true;
+         }
+      else 
+         return false;
+      }
 
-            return false;
-            }
-        case IfLe:
-            {
-            if (high <= 0 || low >= 1)
-                return true;
-            
-            return false;
-            }
-        case IfLt:
-            {
-            if (high <= -1 || low >= 0)
-                return true;
+   return false;
+   }
 
-            return false;
-            }
-        case IfGt:
-            {
-            if (high <= 0 || low >= 1)
-                return true;
+bool TR::PotentialOptimizationVPPredicate::test(TR::AbsValue *value)
+   {
+   if (value->isTop())
+      return false;
 
-            return false;
-            }
-        default: TR_ASSERT_FATAL(false, "Unexpected type");
-        }
-    }
+   TR::AbsVPValue* vpValue = static_cast<TR::AbsVPValue*>(value);
+   return holdPartialOrderRelation(vpValue->getConstraint(), _constraint);
+   }
 
-bool TR::NullBranchFoldingPredicate::predicate(TR_YesNoMaybe isNonNull, Kind kind)
-    {
-    if (isNonNull != TR_maybe)
-        return true;
-
-    return false;
-    }
-
-bool TR::NullCheckFoldingPredicate::predicate(TR_YesNoMaybe isNonNull)
-    {
-    if (isNonNull != TR_maybe)
-        return true;
-
-    return false;
-    }
-
-bool TR::InstanceOfFoldingPredicate::predicate(TR_YesNoMaybe isNonNull, TR_OpaqueClassBlock* instanceClass, bool isFixedClass, TR_OpaqueClassBlock* castClass, TR_FrontEnd* fe)
-    {
-    if (isNonNull == TR_no) //instanceof null
-        return true;
-        
-
-    if (!instanceClass || !castClass)
-        return false;
-
-    TR_YesNoMaybe isInstance = fe->isInstanceOf(instanceClass, castClass, isFixedClass, true);
-
-    if (isInstance != TR_maybe)
-        return true;
-
-    return false;
-    }
-
-bool TR::CheckCastFoldingPredicate::predicate(TR_YesNoMaybe isNonNull, TR_OpaqueClassBlock* checkClass, bool isFixedClass, TR_OpaqueClassBlock* castClass, TR_FrontEnd* fe)
-    {
-    if (isNonNull == TR_no) //checkcast null
-        return true;
-        
-    if (!checkClass || !castClass)
-        return false;
-
-    TR_YesNoMaybe isInstance = fe->isInstanceOf(checkClass, castClass, isFixedClass, true);
-
-    if (isInstance != TR_maybe)
-        return true;
-        
-    return false;
-    }
+void TR::PotentialOptimizationVPPredicate::trace(TR::Compilation* comp)
+   {
+   traceMsg(comp, "Predicate Constraint: ");
+   _constraint->print(_vp);
+   }
+   

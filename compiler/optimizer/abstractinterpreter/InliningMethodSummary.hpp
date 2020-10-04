@@ -22,18 +22,55 @@
 #ifndef INLINING_METHOD_SUMMARY_INCL
 #define INLINING_METHOD_SUMMARY_INCL
 
-#include "infra/deque.hpp"
+#include "optimizer/VPConstraint.hpp"
+#include "optimizer/ValuePropagation.hpp"
 #include "optimizer/abstractinterpreter/AbsValue.hpp"
+
+namespace TR { class PotentialOptimizationPredicate; }
 
 namespace TR {
 
 /**
- * A potential optimization will be unlocked by inlining.
+ * The Inlining Method Summary captures potential optimization opportunities of inlining one particular method 
+ * and also specifies the constraints that are the maximal safe values to make the optimizations happen.
  */
-class PotentialOptimization
+class InliningMethodSummary
    {
    public:
-   enum OptKind
+   
+   InliningMethodSummary(TR::Region& region) :
+      _region(region),
+      _optsByArg(region)
+   {}
+
+   /**
+    * @brief calculate the total static benefit from a particular argument after inlining. 
+    *
+    * @param arg the argument
+    * @param argPos the position of the argument
+    * 
+    * @return the total static benefit
+    */
+   uint32_t testArgument(TR::AbsValue* arg, uint32_t argPos);
+   
+   void trace(TR::Compilation* comp);
+
+   void addPotentialOptimizationByArgument(TR::PotentialOptimizationPredicate* predicate, uint32_t argPos);
+
+   private:
+
+   TR::Region& region() { return _region; }
+
+   typedef TR::deque<TR::PotentialOptimizationPredicate*, TR::Region&> PredicateContainer;
+   TR::deque<PredicateContainer*, TR::Region&> _optsByArg;
+   TR::Region &_region;
+   };
+
+class PotentialOptimizationPredicate
+   {
+   public:
+
+   enum Kind
       {
       BranchFolding,
       NullCheckFolding,
@@ -41,91 +78,51 @@ class PotentialOptimization
       CheckCastFolding
       };
 
-   PotentialOptimization(int32_t bci, TR::ResolvedMethodSymbol* symbol, TR::PotentialOptimization::OptKind optKind) :
-         _bytecodeIndex(bci),
-         _symbol(symbol),
-         _optKind(optKind)
+   PotentialOptimizationPredicate(int32_t bytecodeIndex, TR::PotentialOptimizationPredicate::Kind kind) :
+         _bytecodeIndex(bytecodeIndex),
+         _kind(kind)
       {}
 
-   void trace(TR::Compilation* comp);
+   virtual void trace(TR::Compilation* comp)=0; 
+   
+   /**
+    * @brief Test whether the given value is a safe value in terms of the optimization's constraint.
+    *
+    * @param value the value to be tested against the constraint
+    * 
+    * @return true if it is a safe value to unlock the optimization. false otherwise.
+    */
+   virtual bool test(TR::AbsValue* value)=0;
 
-   const char* getOptKindName();
+   const char* getName();
+   int32_t getBytecodeIndex() { return _bytecodeIndex; }
 
-   private:
-   int32_t _bytecodeIndex;
-   TR::ResolvedMethodSymbol* _symbol;
-   TR::PotentialOptimization::OptKind _optKind;
+   protected:
+
+   int32_t _bytecodeIndex; 
+   TR::PotentialOptimizationPredicate::Kind _kind;
    };
 
-/**
- * The inlinling method summary captures potentail optimizations after inlining a particular method.
- */
-class InliningMethodSummary
+class PotentialOptimizationVPPredicate : public PotentialOptimizationPredicate
    {
    public:
-   InliningMethodSummary(TR::Region& region) :
-         _opts(region)
+   PotentialOptimizationVPPredicate(TR::VPConstraint* constraint, int32_t bytecodeIndex, TR::PotentialOptimizationPredicate::Kind kind, TR::ValuePropagation* vp) :
+         PotentialOptimizationPredicate(bytecodeIndex, kind),
+         _constraint(constraint),
+         _vp(vp)
       {}
 
-   void addOpt(TR::PotentialOptimization* opt) { _opts.push_back(opt); }
-
-   uint32_t getIndirectBenefit() { return _opts.size(); };
-
-   void trace(TR::Compilation* comp);
+   virtual bool test(TR::AbsValue *value);
+   virtual void trace(TR::Compilation* comp);
 
    private:
-   TR::deque<TR::PotentialOptimization*, TR::Region&> _opts;
+
+   bool holdPartialOrderRelation(TR::VPConstraint* valueConstraint, TR::VPConstraint* testConstraint);
+
+   TR::ValuePropagation* _vp; 
+   TR::VPConstraint* _constraint;
+   
    };
-
-/**
- * A Predicate tests if the given value is a safe value to unlock an optimization.
- */
-class BranchFoldingPredicate
-   {
-   public:
-   enum Kind
-      {
-      IfEq,
-      IfNe,
-      IfLt,
-      IfGt,
-      IfLe,
-      IfGe
-      };
-
-   static bool predicate(int32_t low, int32_t high, TR::BranchFoldingPredicate::Kind kind);
-   };
-
-class NullBranchFoldingPredicate
-   {
-   public:
-   enum Kind 
-      {
-      IfNull,
-      IfNonNull
-      };
-
-   static bool predicate(TR_YesNoMaybe isNonNull, TR::NullBranchFoldingPredicate::Kind kind);
-   };
-
-class NullCheckFoldingPredicate
-   {
-   public:
-   static bool predicate(TR_YesNoMaybe isNonNull);
-   };
-
-class InstanceOfFoldingPredicate 
-   {
-   public:
-   static bool predicate(TR_YesNoMaybe isNonNull, TR_OpaqueClassBlock* instanceClass, bool isFixedClass, TR_OpaqueClassBlock* castClass, TR_FrontEnd* fe);
-   };
-
-class CheckCastFoldingPredicate
-   {
-   public:
-   static bool predicate(TR_YesNoMaybe isNonNull, TR_OpaqueClassBlock* checkClass, bool isFixedClass, TR_OpaqueClassBlock* castClass, TR_FrontEnd* fe);
-   };
-
 }
 
 #endif
