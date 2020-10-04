@@ -31,6 +31,7 @@
 #include <queue>
 
 namespace TR {
+
 /**
  * IDT stands for Inlining Dependency Tree
  * It is a data structure that holds all candidate methods to be inlined. 
@@ -49,37 +50,45 @@ class IDT
    /**
     * @brief Get the total number of nodes in this IDT.
     *
-    * @return int32_t
+    * @return the total number of node
     */
    uint32_t getNumNodes() { return _maxIdx + 1; }
    
    /**
     * @brief Get the next avaible IDTNode index.
     *
-    * @return int32_t
+    * @return the next index
     */
    int32_t getNextGlobalIDTNodeIndex() { return _maxIdx; }
 
    /**
     * @brief Increase the next available IDTNode index by 1.
     * This should only be called when successfully adding an IDTNode to the IDT
-    *
-    * @return void
     */
    void increaseGlobalIDTNodeIndex()  { _maxIdx ++; }
 
    /**
     * @brief Get the IDTNode using index.
-    * Note: Before using this method for accessing IDTNode, buildIndices() must be called.
+    * Note: Before using this method for accessing IDTNode, flattenIDT() must be called.
     *
-    * @return IDTNode*
+    * @return the IDT node
     */
    TR::IDTNode *getNodeByGlobalIndex(int32_t index);
    
    /**
-    * @brief Flatten all the IDTNodes into a list and calculate the static benefit of each node.
+    * @brief Flatten all the IDTNodes into a list.
     */
-   void updateAndFlattenIDT();
+   void flattenIDT();
+
+   /**
+    * @brief Copy the descendants of fromNode and add them as the descents of toNode
+    * Note: fromNode and toNode must be the same method.
+    * Otherwise, it does not make any sense.
+    * 
+    * @param fromNode the node to copy from
+    * @param toNode the node to copy to
+    */
+   void copyDescendants(IDTNode* fromNode, IDTNode* toNode);
 
    void printTrace();
 

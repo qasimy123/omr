@@ -104,7 +104,7 @@ void TR::IDT::printTrace()
          
    }
 
-void TR::IDT::updateAndFlattenIDT()
+void TR::IDT::flattenIDT()
    {
    if (_indices != NULL)
       return;
@@ -122,17 +122,6 @@ void TR::IDT::updateAndFlattenIDT()
    while (!idtNodeQueue.empty())
       {
       TR::IDTNode* currentNode = idtNodeQueue.front();
-      uint32_t staticBenefit = currentNode->getInliningMethodSummary() ? currentNode->getInliningMethodSummary()->getIndirectBenefit() : 0;
-
-      if (comp()->getOption(TR_TraceBISummary))
-         {
-         traceMsg(comp(), "\n## Inlining Method Summary for method %s:\n", currentNode->getName(comp()->trMemory()));
-         currentNode->getInliningMethodSummary()->trace(comp());
-         traceMsg(comp(), "\n");
-         }
-
-      currentNode->setStaticBenefit(staticBenefit);
-
       idtNodeQueue.pop_front();
 
       const int32_t index = currentNode->getGlobalIndex();
@@ -147,9 +136,43 @@ void TR::IDT::updateAndFlattenIDT()
       }
    }
 
+void TR::IDT::copyDescendants(TR::IDTNode* fromNode, TR::IDTNode* toNode)
+   {
+   TR_ASSERT_FATAL(
+      fromNode->getResolvedMethodSymbol()->getResolvedMethod()->getPersistentIdentifier() 
+      == toNode->getResolvedMethodSymbol()->getResolvedMethod()->getPersistentIdentifier(), 
+      "Copying different nodes is not allowed!");
+
+   for (int32_t i =0 ; i < fromNode->getNumChildren(); i ++)
+      {
+      TR::IDTNode* child = fromNode->getChild(i);
+
+      if (toNode->getBudget() - child->getCost() < 0)
+         continue;
+         
+
+      TR::IDTNode* copiedChild = toNode->addChild(
+                           getNextGlobalIDTNodeIndex(),
+                           child->getCallTarget(),
+                           child->getResolvedMethodSymbol(),
+                           child->getByteCodeIndex(),
+                           child->getCallRatio(),
+                           getRegion()
+                           );
+      if (copiedChild)
+            {
+            increaseGlobalIDTNodeIndex();
+            copiedChild->setInliningMethodSummary(child->getInliningMethodSummary());
+            copiedChild->setStaticBenefit(child->getStaticBenefit());
+            copyDescendants(child, copiedChild);
+            }
+      }
+  
+   }
+
 TR::IDTNode *TR::IDT::getNodeByGlobalIndex(int32_t index)
    {
-   TR_ASSERT_FATAL(_indices, "Call buildIndices() first");
+   TR_ASSERT_FATAL(_indices, "Call flattenIDT() first");
    TR_ASSERT_FATAL(index < getNextGlobalIDTNodeIndex(), "Index out of range!");
    return _indices[index + 1];
    }
