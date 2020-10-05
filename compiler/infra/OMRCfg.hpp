@@ -136,6 +136,7 @@ class CFG
       _calledFrequency = 0;
       _initialBlockFrequency = -1;
       _edgeProbabilities = NULL;
+      _hasBackEdges = false;
    }
 
    TR::CFG * self();
@@ -345,6 +346,9 @@ class CFG
 
    TR::Region& getInternalRegion();
 
+   void setHasBackEdges() { _hasBackEdges = true; }
+   bool hasBackEdges() { return _hasBackEdges; }
+
 protected:
    TR::Compilation *_compilation;
    TR::ResolvedMethodSymbol *_method;
@@ -364,6 +368,7 @@ protected:
    bool _ignoreUnreachableBlocks;
    bool _removingUnreachableBlocks;
 
+   bool _hasBackEdges;
 
    TR::CFGNode **_forwardTraversalOrder;
    int32_t _forwardTraversalLength;
