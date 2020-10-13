@@ -19,63 +19,70 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#ifndef ABS_OP_ARRAY
-#define ABS_OP_ARRAY
+#ifndef ABS_OP_STACK_INCL
+#define ABS_OP_STACK_INCL
 
 #include "env/Region.hpp"
-#include "optimizer/abstractinterpreter/AbsValue.hpp"
 #include <vector>
+#include "optimizer/abstractinterpreter/AbsValue.hpp"
 
 namespace TR {
 
 /**
-.* Abstract representation of the operand array.
+ * Abstract representation of the operand stack.
  */
-class AbsOpArray
+class AbsOpStack
    {
    public:
 
-   AbsOpArray(uint32_t maxArraySize) :
-         _container(maxArraySize, NULL)
-      {}
-
    /**
-    * @brief Clone the op array
+    * @brief Clone an op stack
     * 
-    * @param region The memory region where the cloned local var array should be allocated.
-    * @return the cloned array
+    * @param region The memory region where the cloned op stack would like to allocated.
+    * @return the op stack cloned.
     */
-   TR::AbsOpArray *clone(TR::Region& region) const;
+   TR::AbsOpStack* clone(TR::Region& region) const;
 
    /**
-    * @brief Merge with another abstract op array. This is in-place merge.
+    * @brief Merge with another operand stack. This is in-place merge.
     *
-    * @param other The array to be merged with.
+    * @param other the operand stack to be merged with
     */
-   void merge(const TR::AbsOpArray* other);
-   
+   void merge(const TR::AbsOpStack* other);
+
    /**
-    * @brief Get the abstract value at index i.
+    * @brief Push an abstract value to the operand stack.
+    * @note the abstract value to be pushed must be non-NULL.
     *
-    * @param i the array index
+    * @param value the value to be pushed
+    */
+   void push(TR::AbsValue* value) { _container.push_back(value); }
+
+   /**
+    * @brief Peek the top value on the operand stack (stack top; not lattice top).
+    * @note the stack must not be empty
+    * 
     * @return the abstract value
     */
-   TR::AbsValue *at(uint32_t i) const;
+   TR::AbsValue* peek() const { TR_ASSERT_FATAL(size() > 0, "Peek an empty stack!"); return _container.back(); }
 
    /**
-    * @brief Set the abstract value at index i.
-    *
-    * @param i the array index
-    * @param value the abstract value to be set
+    * @brief Get and pop a value off of the operand stack.
+    * @note the stack must not be empty.
+    * 
+    * @return the abstract value
     */
-   void set(uint32_t i, TR::AbsValue* value);
+   TR::AbsValue* pop();
 
+   bool empty() const { return _container.empty(); }
    size_t size() const { return _container.size(); }
+  
    void print(TR::Compilation* comp) const;
 
    private:
-   std::vector<TR::AbsValue*> _container;
+   std::vector<TR::AbsValue*> _container; 
    };
 
 }
+
 #endif

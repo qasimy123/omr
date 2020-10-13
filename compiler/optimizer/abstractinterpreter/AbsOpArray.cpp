@@ -23,19 +23,19 @@
 
 TR::AbsOpArray* TR::AbsOpArray::clone(TR::Region& region) const
    {
-   TR::AbsOpArray* copy = new (region) TR::AbsOpArray(static_cast<uint32_t>(_container.size()), region);
-   for (auto i = 0; i < _container.size(); i ++)
+   TR::AbsOpArray* copy = new (region) TR::AbsOpArray(_container.size());
+   for (size_t i = 0; i < _container.size(); i ++)
       {
       copy->_container[i] = _container[i] ? _container[i]->clone(region) : NULL;
       }
    return copy;
    }
 
-void TR::AbsOpArray::merge(const TR::AbsOpArray* other, TR::Region& region)
+void TR::AbsOpArray::merge(const TR::AbsOpArray* other)
    {
    TR_ASSERT_FATAL(other->size() == size(), "Op Array Size not equal! other:%d vs self:%d\n", other->size(), size());
 
-   for (auto i = 0; i < size(); i++)
+   for (size_t i = 0; i < size(); i++)
       {
       TR::AbsValue *selfValue = at(i);
       TR::AbsValue *otherValue = other->at(i);
@@ -55,7 +55,7 @@ void TR::AbsOpArray::merge(const TR::AbsOpArray* other, TR::Region& region)
          } 
       else
          {
-         set(i, otherValue->clone(region));
+         set(i, otherValue);
          }
       }
    }
@@ -75,7 +75,7 @@ TR::AbsValue* TR::AbsOpArray::at(uint32_t index) const
 void TR::AbsOpArray::print(TR::Compilation* comp) const
    {
    traceMsg(comp, "Contents of Abstract Local Variable Array:\n");
-   for (auto i = 0; i < size(); i++)
+   for (size_t i = 0; i < size(); i++)
       {
       traceMsg(comp, "A[%d] = ", i);
       if (!at(i))
