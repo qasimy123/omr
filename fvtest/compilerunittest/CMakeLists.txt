@@ -42,24 +42,11 @@ if(OMR_ARCH_POWER)
 	)
 endif()
 
-if(OMR_ARCH_X86)
-	list(APPEND COMPCGTEST_FILES
-		x/BinaryEncoder.cpp
-	)
-endif()
-
 list(APPEND COMPCGTEST_FILES
 	abstractinterpreter/AbsInterpreterTest.cpp
-)
-
-# MSVC and XL C/C++ have trouble with this file
-if (NOT OMR_TOOLCONFIG STREQUAL "msvc" AND NOT OMR_TOOLCONFIG STREQUAL "xlc")
-	list(APPEND COMPCGTEST_FILES
-		CCData.cpp
 	)
-endif()
 
-omr_add_executable(compunittest NOWARNINGS ${COMPCGTEST_FILES})
+omr_add_executable(compunittest ${COMPCGTEST_FILES})
 
 # For the time being, link against Tril even though we don't really need Tril itself. This is done
 # to avoid needing to duplicate the boilerplate in Tril's CMakeLists.txt.
