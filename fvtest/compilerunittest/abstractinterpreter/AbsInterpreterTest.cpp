@@ -92,7 +92,7 @@ TEST_F(AbsVPValueTest, testCloneOperation)
    ASSERT_EQ(value1.isTop(), value2->isTop());
    }
 
-TEST_F(AbsVPValueTest, testMergeOperation)
+TEST_F(AbsVPValueTest, testMergeIntegerConstantsOperation)
    {
    TR::VPIntConst constraint1(1);
    TR::AbsVPValue value1(vp(), &constraint1, TR::Int32);
@@ -107,66 +107,121 @@ TEST_F(AbsVPValueTest, testMergeOperation)
    ASSERT_TRUE(mergedValue1->getDataType() == TR::Int32);
    ASSERT_EQ(1, mergedValue1->getConstraint()->getLowInt());
    ASSERT_EQ(2, mergedValue1->getConstraint()->getHighInt());
+   }
 
-   TR::VPLongConst constraint3(1);
-   TR::AbsVPValue value3(vp(), &constraint3, TR::Int64);
+TEST_F(AbsVPValueTest, testMergeLongConstantsOperation)
+   {
+   TR::VPLongConst constraint1(1);
+   TR::AbsVPValue value1(vp(), &constraint1, TR::Int64);
    
-   TR::VPLongConst constraint4(3);
-   TR::AbsVPValue value4(vp(), &constraint4, TR::Int64);
+   TR::VPLongConst constraint2(3);
+   TR::AbsVPValue value2(vp(), &constraint2, TR::Int64);
 
-   TR::AbsVPValue* mergedValue2 = static_cast<TR::AbsVPValue*>(value3.merge(&value4));
-   ASSERT_FALSE(mergedValue2->isTop());
-   ASSERT_TRUE(mergedValue2->getDataType() == TR::Int64);
-   ASSERT_TRUE(mergedValue2->getConstraint()->asMergedLongConstraints() != NULL);
-   ASSERT_EQ(1, mergedValue2->getConstraint()->getLowLong());
-   ASSERT_EQ(3, mergedValue2->getConstraint()->getHighLong());
+   TR::AbsVPValue* mergedValue = static_cast<TR::AbsVPValue*>(value1.merge(&value2));
+   ASSERT_FALSE(mergedValue->isTop());
+   ASSERT_TRUE(mergedValue->getDataType() == TR::Int64);
+   ASSERT_TRUE(mergedValue->getConstraint()->asMergedLongConstraints() != NULL);
+   ASSERT_EQ(1, mergedValue->getConstraint()->getLowLong());
+   ASSERT_EQ(3, mergedValue->getConstraint()->getHighLong());
+   }
 
-   TR::VPIntRange constraint5(1, 4);
-   TR::AbsVPValue value5(vp(), &constraint5, TR::Int32);
+TEST_F(AbsVPValueTest, testMergeIntegerRangesOperation)
+   {
+   TR::VPIntRange constraint1(1, 4);
+   TR::AbsVPValue value1(vp(), &constraint1, TR::Int32);
    
-   TR::VPIntRange constraint6(2, 8);
-   TR::AbsVPValue value6(vp(), &constraint6, TR::Int32);
+   TR::VPIntRange constraint2(2, 8);
+   TR::AbsVPValue value2(vp(), &constraint2, TR::Int32);
 
-   TR::AbsVPValue* mergedValue3 = static_cast<TR::AbsVPValue*>(value5.merge(&value6));
-   ASSERT_FALSE(mergedValue3->isTop());
-   ASSERT_TRUE(mergedValue3->getConstraint()->asIntRange() != NULL);
-   ASSERT_EQ(1, mergedValue3->getConstraint()->getLowInt());
-   ASSERT_EQ(8, mergedValue3->getConstraint()->getHighInt());
+   TR::AbsVPValue* mergedValue = static_cast<TR::AbsVPValue*>(value1.merge(&value2));
+   ASSERT_FALSE(mergedValue->isTop());
+   ASSERT_TRUE(mergedValue->getConstraint()->asIntRange() != NULL);
+   ASSERT_EQ(1, mergedValue->getConstraint()->getLowInt());
+   ASSERT_EQ(8, mergedValue->getConstraint()->getHighInt());
+   }
 
-   TR::AbsVPValue value7(vp(), NULL, TR::Float);
-   TR::AbsVPValue value8(vp(), NULL, TR::Float);
-   TR::AbsVPValue* mergedValue4 = static_cast<TR::AbsVPValue*>(value7.merge(&value8));
-   ASSERT_TRUE(mergedValue4->isTop());
-   ASSERT_TRUE(mergedValue4->getDataType() == TR::Float);
+TEST_F(AbsVPValueTest, testMergeLongRangesOperation)
+   {
+   TR::VPLongRange constraint1(1, 4);
+   TR::AbsVPValue value1(vp(), &constraint1, TR::Int64);
+   
+   TR::VPLongRange constraint2(2, 8);
+   TR::AbsVPValue value2(vp(), &constraint2, TR::Int64);
 
-   TR::AbsVPValue value9(vp(), NULL, TR::Int32);
-   TR::AbsVPValue value10(vp(), NULL, TR::Float);
-   TR::AbsVPValue* mergedValue5 = static_cast<TR::AbsVPValue*>(value9.merge(&value10));
-   ASSERT_TRUE(mergedValue5->isTop());
-   ASSERT_TRUE(mergedValue5->getDataType() == TR::NoType);
+   TR::AbsVPValue* mergedValue = static_cast<TR::AbsVPValue*>(value1.merge(&value2));
+   ASSERT_FALSE(mergedValue->isTop());
+   ASSERT_TRUE(mergedValue->getConstraint()->asLongRange() != NULL);
+   ASSERT_EQ(1, mergedValue->getConstraint()->getLowLong());
+   ASSERT_EQ(8, mergedValue->getConstraint()->getHighLong());
+   }
 
-   TR::AbsVPValue value11(vp(), NULL, TR::Float);
-   TR::AbsVPValue* mergedValue6 = static_cast<TR::AbsVPValue*>(value11.merge(NULL));
-   ASSERT_EQ(&value11, mergedValue6);
+TEST_F(AbsVPValueTest, testMergeFloatsOperation)
+   {
+   TR::AbsVPValue value1(vp(), NULL, TR::Float);
+   TR::AbsVPValue value2(vp(), NULL, TR::Float);
+   TR::AbsVPValue* mergedValue = static_cast<TR::AbsVPValue*>(value1.merge(&value2));
+   ASSERT_TRUE(mergedValue->isTop());
+   ASSERT_TRUE(mergedValue->getDataType() == TR::Float);
+   }
 
-   TR::AbsVPValue value12(vp(), NULL, TR::Float);
-   TR::AbsVPValue value13(vp(), NULL, TR::Float);
-   TR::AbsVPValue* mergedValue7 = static_cast<TR::AbsVPValue*>(value12.merge(&value13));
-   ASSERT_EQ(-1, mergedValue7->getParameterPosition());
+TEST_F(AbsVPValueTest, testMergeNonTopWithTopOperation)
+   {
+   TR::VPIntConst constraint(1);
+   TR::AbsVPValue value1(vp(), &constraint, TR::Int32);
+   
+   TR::AbsVPValue value2(vp(), NULL, TR::Int32);
 
-   TR::AbsVPValue value14(vp(), NULL, TR::Float);
-   value14.setParameterPosition(3);
-   TR::AbsVPValue value15(vp(), NULL, TR::Float);
-   value15.setParameterPosition(3);
-   TR::AbsVPValue* mergedValue8 = static_cast<TR::AbsVPValue*>(value14.merge(&value15));
-   ASSERT_EQ(3, mergedValue8->getParameterPosition());
+   TR::AbsVPValue* mergedValue = static_cast<TR::AbsVPValue*>(value1.merge(&value2));
 
-   TR::AbsVPValue value16(vp(), NULL, TR::Float);
-   value14.setParameterPosition(3);
-   TR::AbsVPValue value17(vp(), NULL, TR::Float);
-   value15.setParameterPosition(4);
-   TR::AbsVPValue* mergedValue9 = static_cast<TR::AbsVPValue*>(value16.merge(&value17));
-   ASSERT_EQ(-1, mergedValue9->getParameterPosition());
+   ASSERT_TRUE(mergedValue->isTop());
+   ASSERT_TRUE(mergedValue->getDataType() == TR::Int32);
+   }
+
+TEST_F(AbsVPValueTest, testMergeDifferentTypesOperation)
+   {
+   TR::AbsVPValue value1(vp(), NULL, TR::Int32);
+   TR::AbsVPValue value2(vp(), NULL, TR::Float);
+   TR::AbsVPValue* mergedValue = static_cast<TR::AbsVPValue*>(value1.merge(&value2));
+   ASSERT_TRUE(mergedValue->isTop());
+   ASSERT_TRUE(mergedValue->getDataType() == TR::NoType);
+   }
+
+TEST_F(AbsVPValueTest, testMergeWithUninitiliazedValueOperation)
+   {
+   TR::AbsVPValue value(vp(), NULL, TR::Int32);
+   TR::AbsVPValue* mergedValue6 = static_cast<TR::AbsVPValue*>(value.merge(NULL));
+   ASSERT_EQ(&value, mergedValue6);
+   }
+
+TEST_F(AbsVPValueTest, testMergeNonParametersOperation)
+   {
+   TR::AbsVPValue value1(vp(), NULL, TR::Int32);
+   TR::AbsVPValue value2(vp(), NULL, TR::Int32);
+   TR::AbsVPValue* mergedValue = static_cast<TR::AbsVPValue*>(value1.merge(&value2));
+   ASSERT_FALSE(mergedValue->isParameter());
+   ASSERT_EQ(-1, mergedValue->getParameterPosition());
+   }
+
+TEST_F(AbsVPValueTest, testMergeParametersOperation)
+   {
+   TR::AbsVPValue value1(vp(), NULL, TR::Int32);
+   value1.setParameterPosition(3);
+   TR::AbsVPValue value2(vp(), NULL, TR::Int32);
+   value2.setParameterPosition(3);
+   TR::AbsVPValue* mergedValue = static_cast<TR::AbsVPValue*>(value1.merge(&value2));
+   ASSERT_TRUE(mergedValue->isParameter());
+   ASSERT_EQ(3, mergedValue->getParameterPosition());
+   }
+
+TEST_F(AbsVPValueTest, testMergeDiffferentParametersOperation)
+   {
+   TR::AbsVPValue value1(vp(), NULL, TR::Int32);
+   value1.setParameterPosition(3);
+   TR::AbsVPValue value2(vp(), NULL, TR::Int32);
+   value2.setParameterPosition(4);
+   TR::AbsVPValue* mergedValue = static_cast<TR::AbsVPValue*>(value1.merge(&value2));
+   ASSERT_FALSE(mergedValue->isParameter());
+   ASSERT_EQ(-1, mergedValue->getParameterPosition());
    }
 
 class AbsOpStackTest : public TRTest::AbsInterpreterTest {};
@@ -209,9 +264,9 @@ TEST_F(AbsOpStackTest, testPushPopAndPeek)
    {
    TR::AbsOpStack stack(region());
 
-   TRTest::AbsTestValue value1(TR::Int32);
-   TRTest::AbsTestValue value2(TR::Int32);
-   TRTest::AbsTestValue value3(TR::Int32);
+   TRTest::AbsTestValue value1(TR::Int32,0,0);
+   TRTest::AbsTestValue value2(TR::Int32,0,0);
+   TRTest::AbsTestValue value3(TR::Int32,0,0);
 
    // push and pop should correspond with each other
    stack.push(&value1);
@@ -228,9 +283,9 @@ TEST_F(AbsOpStackTest, testCloneOperation)
    {
    TR::AbsOpStack stack1(region());
 
-   TRTest::AbsTestValue value1(TR::Int32);
-   TRTest::AbsTestValue value2(TR::Int32);
-   TRTest::AbsTestValue value3(TR::Int32);
+   TRTest::AbsTestValue value1(TR::Int32,0,0);
+   TRTest::AbsTestValue value2(TR::Int32,0,0);
+   TRTest::AbsTestValue value3(TR::Int32,0,0);
 
    stack1.push(&value1);
    stack1.push(&value2);
@@ -250,23 +305,18 @@ TEST_F(AbsOpStackTest, testCloneOperation)
    //cloned stack should have different pointers of abstract values.
    ASSERT_EQ(3, stack2->size());
 
-   ASSERT_NE(&value3, stack2->peek());
-   stack2->pop();
-
-   ASSERT_NE(&value2, stack2->peek());
-   stack2->pop();
-
-   ASSERT_NE(&value1, stack2->peek());
-   stack2->pop();
+   ASSERT_NE(&value3, stack2->pop());
+   ASSERT_NE(&value2, stack2->pop());
+   ASSERT_NE(&value1, stack2->pop());
    }
 
 TEST_F(AbsOpStackTest, testMergeOperation)
    {
    TR::AbsOpStack stack1(region());
 
-   TRTest::AbsTestValue value1(TR::Int32);
-   TRTest::AbsTestValue value2(TR::Int32);
-   TRTest::AbsTestValue value3(TR::Int32);
+   TRTest::AbsTestValue value1(TR::Int32,0,0);
+   TRTest::AbsTestValue value2(TR::Int32,3,5);
+   TRTest::AbsTestValue value3(TR::Int32,INT_MIN,INT_MAX);
 
    stack1.push(&value1);
    stack1.push(&value2);
@@ -274,9 +324,13 @@ TEST_F(AbsOpStackTest, testMergeOperation)
    
    TR::AbsOpStack stack2(region());
 
-   stack2.push(&value1);
-   stack2.push(&value2);
-   stack2.push(&value3);
+   TRTest::AbsTestValue value4(TR::Int32,1,1);
+   TRTest::AbsTestValue value5(TR::Int32,-5,7);
+   TRTest::AbsTestValue value6(TR::Int32,0,0);
+
+   stack2.push(&value4);
+   stack2.push(&value5);
+   stack2.push(&value6);
 
    stack1.merge(&stack2);
 
@@ -285,9 +339,24 @@ TEST_F(AbsOpStackTest, testMergeOperation)
 
    //other should not be affected
    ASSERT_EQ(3, stack2.size());
-   ASSERT_EQ(&value3, stack2.pop());
-   ASSERT_EQ(&value2, stack2.pop());
-   ASSERT_EQ(&value1, stack2.pop());
+   ASSERT_EQ(&value6, stack2.pop());
+   ASSERT_EQ(&value5, stack2.pop());
+   ASSERT_EQ(&value4, stack2.pop());
+
+   TRTest::AbsTestValue* v3 = static_cast<TRTest::AbsTestValue*>(stack1.pop());
+   ASSERT_EQ(INT_MIN, v3->getLow());
+   ASSERT_EQ(INT_MAX, v3->getHigh());
+   ASSERT_TRUE(v3->isTop());
+
+   TRTest::AbsTestValue* v2 = static_cast<TRTest::AbsTestValue*>(stack1.pop());
+   ASSERT_EQ(-5, v2->getLow());
+   ASSERT_EQ(7, v2->getHigh());
+   ASSERT_FALSE(v2->isTop());
+
+   TRTest::AbsTestValue* v1 = static_cast<TRTest::AbsTestValue*>(stack1.pop());
+   ASSERT_EQ(0, v1->getLow());
+   ASSERT_EQ(1, v1->getHigh());
+   ASSERT_FALSE(v1->isTop());
    }
 
 
@@ -306,9 +375,9 @@ TEST_F(AbsOpArrayTest, testSetAndAt)
    {
    TR::AbsOpArray array(3, region());
 
-   TRTest::AbsTestValue value1(TR::Int32);
-   TRTest::AbsTestValue value2(TR::Int32);
-   TRTest::AbsTestValue value3(TR::Int32);
+   TRTest::AbsTestValue value1(TR::Int32,0,0);
+   TRTest::AbsTestValue value2(TR::Int32,0,0);
+   TRTest::AbsTestValue value3(TR::Int32,0,0);
 
    array.set(0, &value1);
    array.set(1, &value2);
@@ -318,13 +387,12 @@ TEST_F(AbsOpArrayTest, testSetAndAt)
    ASSERT_EQ(&value3, array.at(2));
    }
 
-
 TEST_F(AbsOpArrayTest, testCloneOperation) {
    TR::AbsOpArray array(3, region());
 
-   TRTest::AbsTestValue value1(TR::Int32);
-   TRTest::AbsTestValue value2(TR::Int32);
-   TRTest::AbsTestValue value3(TR::Int32);
+   TRTest::AbsTestValue value1(TR::Int32,0,0);
+   TRTest::AbsTestValue value2(TR::Int32,0,0);
+   TRTest::AbsTestValue value3(TR::Int32,0,0);
 
    array.set(0, &value1);
    array.set(1, &value2);
@@ -352,9 +420,9 @@ TEST_F(AbsOpArrayTest, testMergeOperation)
    {
    TR::AbsOpArray array(3, region());
 
-   TRTest::AbsTestValue value1(TR::Int32);
-   TRTest::AbsTestValue value2(TR::Int32);
-   TRTest::AbsTestValue value3(TR::Int32);
+   TRTest::AbsTestValue value1(TR::Int32,1,1);
+   TRTest::AbsTestValue value2(TR::Int32,5,8);
+   TRTest::AbsTestValue value3(TR::Int32,INT_MIN,INT_MAX);
 
    array.set(0, &value1);
    array.set(1, &value2);
@@ -362,9 +430,9 @@ TEST_F(AbsOpArrayTest, testMergeOperation)
 
    TR::AbsOpArray array2(3, region());
 
-   TRTest::AbsTestValue value4(TR::Int32);
-   TRTest::AbsTestValue value5(TR::Int32);
-   TRTest::AbsTestValue value6(TR::Int32);
+   TRTest::AbsTestValue value4(TR::Int32,-5,-10);
+   TRTest::AbsTestValue value5(TR::Int32,0,0);
+   TRTest::AbsTestValue value6(TR::Int32,8,9);
 
    array2.set(0, &value4);
    array2.set(1, &value5);
@@ -380,4 +448,19 @@ TEST_F(AbsOpArrayTest, testMergeOperation)
    ASSERT_EQ(&value4, array2.at(0));
    ASSERT_EQ(&value5, array2.at(1));
    ASSERT_EQ(&value6, array2.at(2));
+
+   TRTest::AbsTestValue* v1 = static_cast<TRTest::AbsTestValue*>(array.at(0));
+   ASSERT_EQ(-5, v1->getLow());
+   ASSERT_EQ(1, v1->getHigh());
+   ASSERT_FALSE(v1->isTop());
+
+   TRTest::AbsTestValue* v2 = static_cast<TRTest::AbsTestValue*>(array.at(1));
+   ASSERT_EQ(0, v2->getLow());
+   ASSERT_EQ(8, v2->getHigh());
+   ASSERT_FALSE(v2->isTop());
+
+   TRTest::AbsTestValue* v3 = static_cast<TRTest::AbsTestValue*>(array.at(2));
+   ASSERT_EQ(INT_MIN, v3->getLow());
+   ASSERT_EQ(INT_MAX, v3->getHigh());
+   ASSERT_TRUE(v3->isTop());
    }

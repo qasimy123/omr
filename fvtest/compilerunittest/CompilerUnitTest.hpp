@@ -97,7 +97,6 @@ class CompilerUnitTest : public ::testing::Test
       _symbol->setFlowGraph(cfg);
       _optimizer = new (region()) TR::Optimizer(&_comp, _symbol, false);
       _comp.setOptimizer(_optimizer);
-      fakeNode = TR::Node::create(TR::treetop);
       }
 
    TR::Region& region() { return _dispatchRegion; }
@@ -112,7 +111,6 @@ class CompilerUnitTest : public ::testing::Test
    TR::Options _options;
    NullIlGenRequest _ilGenRequest;
    TR::ResolvedMethodSymbol* _symbol;
-   TR::Node *fakeNode;
    TR::ResolvedMethod _method;
    TR::Compilation _comp;
    TR::Optimizer* _optimizer;

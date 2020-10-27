@@ -51,34 +51,44 @@ class AbsInterpreterTest : public TRTest::CompilerUnitTest
 class AbsTestValue : public TR::AbsValue
    {
    public:
-   AbsTestValue(TR::DataType dataType) :
+   AbsTestValue(TR::DataType dataType, int32_t low, int32_t high) :
          TR::AbsValue(dataType),
-         _isTop(false)
+         _low(low),
+         _high(high)
    {}
+
+   int32_t getLow() const { return _low; }
+   int32_t getHigh() const { return _high; }
 
    virtual TR::AbsValue* clone(TR::Region& region) const
       {
-      TRTest::AbsTestValue* copy = new (region) TRTest::AbsTestValue(_dataType, _paramPos, _isTop);
+      TRTest::AbsTestValue* copy = new (region) TRTest::AbsTestValue(_dataType, _paramPos, _low, _high);
       return copy;
       } 
 
-   virtual bool isTop() const { return _isTop; }
+   virtual bool isTop() const { return _low == INT_MIN && _high == INT_MAX; }
 
-   virtual void setToTop() { _isTop = true; }
+   virtual void setToTop() { _low = INT_MIN; _high = INT_MAX;  }
 
-   virtual TR::AbsValue* merge(const TR::AbsValue *other) { return this; }
+   virtual TR::AbsValue* merge(const TR::AbsValue *other) 
+      { 
+      const TRTest::AbsTestValue* v = static_cast<const TRTest::AbsTestValue*>(other);
+      _low = v->getLow() < _low ?  v->getLow() : _low;
+      _high = v->getHigh() > _high ? v->getHigh() : _high;
+      return this;
+      }
 
    virtual void print(TR::Compilation* comp) const {} 
 
    private:
-
-   AbsTestValue(TR::DataType dataType, int32_t paramPos, bool isTop) :
+   AbsTestValue(TR::DataType dataType, int32_t paramPos, int32_t low, int32_t high) :
          TR::AbsValue(dataType, paramPos),
-         _isTop(isTop)
+         _low(low),
+         _high(high)
    {}
 
-   bool _isTop;
-
+   int32_t _low;
+   int32_t _high;
    };
 }
 

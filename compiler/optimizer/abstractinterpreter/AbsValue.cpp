@@ -31,6 +31,9 @@ TR::AbsValue* TR::AbsVPValue::merge(const TR::AbsValue *other)
    {
    if (other == NULL)
       return this;
+   
+   if (_paramPos != other->getParameterPosition()) 
+      _paramPos = -1;
 
    if (other->getDataType() != _dataType) 
       {
@@ -42,18 +45,13 @@ TR::AbsValue* TR::AbsVPValue::merge(const TR::AbsValue *other)
    if (isTop())
       return this;
 
-   if (_paramPos != other->getParameterPosition()) 
-      _paramPos = -1;
-
-   const TR::AbsVPValue* otherVPValue = static_cast<const TR::AbsVPValue*>(other);
-
-   if (otherVPValue->isTop()) 
+   if (other->isTop()) 
       {
       setToTop();
       return this;
       }
 
-   TR::VPConstraint *mergedConstraint = _constraint->merge(otherVPValue->getConstraint(), _vp);
+   TR::VPConstraint *mergedConstraint = _constraint->merge(static_cast<const TR::AbsVPValue*>(other)->getConstraint(), _vp);
 
    _constraint = mergedConstraint;
    return this;
