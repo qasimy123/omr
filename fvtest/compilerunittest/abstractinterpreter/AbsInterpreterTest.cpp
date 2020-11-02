@@ -29,27 +29,24 @@
 
 class AbsVPValueTest : public TRTest::AbsInterpreterTest {};
 
-TEST_F(AbsVPValueTest, testParameter) 
-    {
+TEST_F(AbsVPValueTest, testParameter) {
     TR::VPIntConst constraint(1);
     TR::AbsVPValue value1(vp(), &constraint, TR::Int32);
     ASSERT_FALSE(value1.isParameter());
     value1.setParameterPosition(1);
     ASSERT_TRUE(value1.isParameter());
     ASSERT_EQ(1, value1.getParameterPosition());
-    }
+}
 
-TEST_F(AbsVPValueTest, testSetToTop)
-    {
+TEST_F(AbsVPValueTest, testSetToTop) {
     TR::VPIntConst constraint(1);
     TR::AbsVPValue value1(vp(), &constraint, TR::Int32);
     ASSERT_FALSE(value1.isTop());
     value1.setToTop();
     ASSERT_TRUE(value1.isTop());
-    }
+}
 
-TEST_F(AbsVPValueTest, testDataType) 
-    {
+TEST_F(AbsVPValueTest, testDataType) {
     TR::AbsVPValue value1(vp(), NULL, TR::Int32);
 
     // Not able to test using ASSERT_EQ because the == operator of TR::DataType is not declared as const.
@@ -62,10 +59,9 @@ TEST_F(AbsVPValueTest, testDataType)
     ASSERT_TRUE(value4.getDataType() == TR::Double);
     TR::AbsVPValue value5(vp(), NULL, TR::Address);
     ASSERT_TRUE(value5.getDataType() == TR::Address);
-    }
+}
 
-TEST_F(AbsVPValueTest, testSetParam)
-    {
+TEST_F(AbsVPValueTest, testSetParam) {
     TR::VPIntConst constraint(1);
     TR::AbsVPValue value1(vp(), &constraint, TR::Int32);
     ASSERT_EQ(-1, value1.getParameterPosition());
@@ -73,10 +69,9 @@ TEST_F(AbsVPValueTest, testSetParam)
     ASSERT_EQ(2, value1.getParameterPosition());
     value1.setParameterPosition(5);
     ASSERT_EQ(5, value1.getParameterPosition());
-    }
+}
 
-TEST_F(AbsVPValueTest, testCloneOperation)
-    {
+TEST_F(AbsVPValueTest, testCloneOperation) {
     TR::VPIntConst constraint(1);
     TR::AbsVPValue value1(vp(), &constraint, TR::Int32);
     TR::AbsVPValue* value2 = static_cast<TR::AbsVPValue*>(value1.clone(region()));
@@ -90,10 +85,9 @@ TEST_F(AbsVPValueTest, testCloneOperation)
     ASSERT_EQ(value1.getParameterPosition(), value2->getParameterPosition());
     ASSERT_EQ(value1.isParameter(), value2->isParameter());
     ASSERT_EQ(value1.isTop(), value2->isTop());
-    }
+}
 
-TEST_F(AbsVPValueTest, testMergeIntegerConstantsOperation)
-    {
+TEST_F(AbsVPValueTest, testMergeIntegerConstantsOperation) {
     TR::VPIntConst constraint1(1);
     TR::AbsVPValue value1(vp(), &constraint1, TR::Int32);
 
@@ -107,10 +101,9 @@ TEST_F(AbsVPValueTest, testMergeIntegerConstantsOperation)
     ASSERT_TRUE(mergedValue1->getDataType() == TR::Int32);
     ASSERT_EQ(1, mergedValue1->getConstraint()->getLowInt());
     ASSERT_EQ(2, mergedValue1->getConstraint()->getHighInt());
-    }
+}
 
-TEST_F(AbsVPValueTest, testMergeLongConstantsOperation)
-    {
+TEST_F(AbsVPValueTest, testMergeLongConstantsOperation) {
     TR::VPLongConst constraint1(1);
     TR::AbsVPValue value1(vp(), &constraint1, TR::Int64);
 
@@ -123,10 +116,9 @@ TEST_F(AbsVPValueTest, testMergeLongConstantsOperation)
     ASSERT_TRUE(mergedValue->getConstraint()->asMergedLongConstraints() != NULL);
     ASSERT_EQ(1, mergedValue->getConstraint()->getLowLong());
     ASSERT_EQ(3, mergedValue->getConstraint()->getHighLong());
-    }
+}
 
-TEST_F(AbsVPValueTest, testMergeIntegerRangesOperation)
-    {
+TEST_F(AbsVPValueTest, testMergeIntegerRangesOperation) {
     TR::VPIntRange constraint1(1, 4);
     TR::AbsVPValue value1(vp(), &constraint1, TR::Int32);
 
@@ -138,10 +130,9 @@ TEST_F(AbsVPValueTest, testMergeIntegerRangesOperation)
     ASSERT_TRUE(mergedValue->getConstraint()->asIntRange() != NULL);
     ASSERT_EQ(1, mergedValue->getConstraint()->getLowInt());
     ASSERT_EQ(8, mergedValue->getConstraint()->getHighInt());
-    }
+}
 
-TEST_F(AbsVPValueTest, testMergeLongRangesOperation)
-    {
+TEST_F(AbsVPValueTest, testMergeLongRangesOperation) {
     TR::VPLongRange constraint1(1, 4);
     TR::AbsVPValue value1(vp(), &constraint1, TR::Int64);
 
@@ -153,19 +144,17 @@ TEST_F(AbsVPValueTest, testMergeLongRangesOperation)
     ASSERT_TRUE(mergedValue->getConstraint()->asLongRange() != NULL);
     ASSERT_EQ(1, mergedValue->getConstraint()->getLowLong());
     ASSERT_EQ(8, mergedValue->getConstraint()->getHighLong());
-    }
+}
 
-TEST_F(AbsVPValueTest, testMergeFloatsOperation)
-    {
+TEST_F(AbsVPValueTest, testMergeFloatsOperation) {
     TR::AbsVPValue value1(vp(), NULL, TR::Float);
     TR::AbsVPValue value2(vp(), NULL, TR::Float);
     TR::AbsVPValue* mergedValue = static_cast<TR::AbsVPValue*>(value1.merge(&value2));
     ASSERT_TRUE(mergedValue->isTop());
     ASSERT_TRUE(mergedValue->getDataType() == TR::Float);
-    }
+}
 
-TEST_F(AbsVPValueTest, testMergeNonTopWithTopOperation)
-    {
+TEST_F(AbsVPValueTest, testMergeNonTopWithTopOperation) {
     TR::VPIntConst constraint(1);
     TR::AbsVPValue value1(vp(), &constraint, TR::Int32);
 
@@ -175,35 +164,31 @@ TEST_F(AbsVPValueTest, testMergeNonTopWithTopOperation)
 
     ASSERT_TRUE(mergedValue->isTop());
     ASSERT_TRUE(mergedValue->getDataType() == TR::Int32);
-    }
+}
 
-TEST_F(AbsVPValueTest, testMergeDifferentTypesOperation)
-    {
+TEST_F(AbsVPValueTest, testMergeDifferentTypesOperation) {
     TR::AbsVPValue value1(vp(), NULL, TR::Int32);
     TR::AbsVPValue value2(vp(), NULL, TR::Float);
     TR::AbsVPValue* mergedValue = static_cast<TR::AbsVPValue*>(value1.merge(&value2));
     ASSERT_TRUE(mergedValue->isTop());
     ASSERT_TRUE(mergedValue->getDataType() == TR::NoType);
-    }
+}
 
-TEST_F(AbsVPValueTest, testMergeWithUninitiliazedValueOperation)
-    {
+TEST_F(AbsVPValueTest, testMergeWithUninitiliazedValueOperation) {
     TR::AbsVPValue value(vp(), NULL, TR::Int32);
     TR::AbsVPValue* mergedValue6 = static_cast<TR::AbsVPValue*>(value.merge(NULL));
     ASSERT_EQ(&value, mergedValue6);
-    }
+}
 
-TEST_F(AbsVPValueTest, testMergeNonParametersOperation)
-    {
+TEST_F(AbsVPValueTest, testMergeNonParametersOperation) {
     TR::AbsVPValue value1(vp(), NULL, TR::Int32);
     TR::AbsVPValue value2(vp(), NULL, TR::Int32);
     TR::AbsVPValue* mergedValue = static_cast<TR::AbsVPValue*>(value1.merge(&value2));
     ASSERT_FALSE(mergedValue->isParameter());
     ASSERT_EQ(-1, mergedValue->getParameterPosition());
-    }
+}
 
-TEST_F(AbsVPValueTest, testMergeParametersOperation)
-    {
+TEST_F(AbsVPValueTest, testMergeParametersOperation) {
     TR::AbsVPValue value1(vp(), NULL, TR::Int32);
     value1.setParameterPosition(3);
     TR::AbsVPValue value2(vp(), NULL, TR::Int32);
@@ -211,10 +196,9 @@ TEST_F(AbsVPValueTest, testMergeParametersOperation)
     TR::AbsVPValue* mergedValue = static_cast<TR::AbsVPValue*>(value1.merge(&value2));
     ASSERT_TRUE(mergedValue->isParameter());
     ASSERT_EQ(3, mergedValue->getParameterPosition());
-    }
+}
 
-TEST_F(AbsVPValueTest, testMergeDiffferentParametersOperation)
-    {
+TEST_F(AbsVPValueTest, testMergeDiffferentParametersOperation) {
     TR::AbsVPValue value1(vp(), NULL, TR::Int32);
     value1.setParameterPosition(3);
     TR::AbsVPValue value2(vp(), NULL, TR::Int32);
@@ -222,11 +206,10 @@ TEST_F(AbsVPValueTest, testMergeDiffferentParametersOperation)
     TR::AbsVPValue* mergedValue = static_cast<TR::AbsVPValue*>(value1.merge(&value2));
     ASSERT_FALSE(mergedValue->isParameter());
     ASSERT_EQ(-1, mergedValue->getParameterPosition());
-    }
+}
 
 class AbsOpStackTest : public TRTest::AbsInterpreterTest {};
-TEST_F(AbsOpStackTest, testSizeAndEmpty)
-    {
+TEST_F(AbsOpStackTest, testSizeAndEmpty) {
     TR::AbsOpStack stack(region());
     ASSERT_EQ(0, stack.size());
     ASSERT_TRUE(stack.empty());
@@ -258,10 +241,9 @@ TEST_F(AbsOpStackTest, testSizeAndEmpty)
     stack.pop();
     ASSERT_EQ(0, stack.size());
     ASSERT_TRUE(stack.empty());
-    }
+}
 
-TEST_F(AbsOpStackTest, testPushPopAndPeek)
-    {
+TEST_F(AbsOpStackTest, testPushPopAndPeek) {
     TR::AbsOpStack stack(region());
 
     TRTest::AbsTestValue value1(TR::Int32, 0, 0);
@@ -277,10 +259,9 @@ TEST_F(AbsOpStackTest, testPushPopAndPeek)
     ASSERT_EQ(&value2, stack.peek());
     stack.pop();
     stack.pop();
-    }
+}
 
-TEST_F(AbsOpStackTest, testCloneOperation)
-    {
+TEST_F(AbsOpStackTest, testCloneOperation) {
     TR::AbsOpStack stack1(region());
 
     TRTest::AbsTestValue value1(TR::Int32, 0, 0);
@@ -308,10 +289,9 @@ TEST_F(AbsOpStackTest, testCloneOperation)
     ASSERT_NE(&value3, stack2->pop());
     ASSERT_NE(&value2, stack2->pop());
     ASSERT_NE(&value1, stack2->pop());
-    }
+}
 
-TEST_F(AbsOpStackTest, testMergeOperation)
-    {
+TEST_F(AbsOpStackTest, testMergeOperation) {
     TR::AbsOpStack stack1(region());
 
     TRTest::AbsTestValue value1(TR::Int32, 0, 0);
@@ -357,22 +337,20 @@ TEST_F(AbsOpStackTest, testMergeOperation)
     ASSERT_EQ(0, v1->getLow());
     ASSERT_EQ(1, v1->getHigh());
     ASSERT_FALSE(v1->isTop());
-    }
+}
 
 
 class AbsOpArrayTest : public TRTest::AbsInterpreterTest {};
 
-TEST_F(AbsOpArrayTest, testSize) 
-    {
+TEST_F(AbsOpArrayTest, testSize) {
     TR::AbsOpArray array(3, region());
     ASSERT_EQ(3, array.size());
 
     TR::AbsOpArray array2(5, region());
     ASSERT_EQ(5, array2.size());
-    }
+}
 
-TEST_F(AbsOpArrayTest, testSetAndAt) 
-    {
+TEST_F(AbsOpArrayTest, testSetAndAt) {
     TR::AbsOpArray array(3, region());
 
     TRTest::AbsTestValue value1(TR::Int32, 0, 0);
@@ -385,10 +363,9 @@ TEST_F(AbsOpArrayTest, testSetAndAt)
     ASSERT_EQ(&value1, array.at(0));
     ASSERT_EQ(&value2, array.at(1));
     ASSERT_EQ(&value3, array.at(2));
-    }
+}
 
-TEST_F(AbsOpArrayTest, testCloneOperation) 
-    {
+TEST_F(AbsOpArrayTest, testCloneOperation) {
     TR::AbsOpArray array(3, region());
 
     TRTest::AbsTestValue value1(TR::Int32, 0, 0);
@@ -415,10 +392,9 @@ TEST_F(AbsOpArrayTest, testCloneOperation)
     ASSERT_NE(&value1, array2->at(0));
     ASSERT_NE(&value2, array2->at(1));
     ASSERT_NE(&value3, array2->at(2));
-    }
+}
 
-TEST_F(AbsOpArrayTest, testMergeOperation) 
-    {
+TEST_F(AbsOpArrayTest, testMergeOperation) {
     TR::AbsOpArray array(3, region());
 
     TRTest::AbsTestValue value1(TR::Int32, 1, 1);
@@ -464,4 +440,4 @@ TEST_F(AbsOpArrayTest, testMergeOperation)
     ASSERT_EQ(INT_MIN, v3->getLow());
     ASSERT_EQ(INT_MAX, v3->getHigh());
     ASSERT_TRUE(v3->isTop());
-    }
+}

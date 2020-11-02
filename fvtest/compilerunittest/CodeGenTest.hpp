@@ -26,20 +26,17 @@
 
 namespace TRTest {
 
-class CodeGenTest : public TRTest::CompilerUnitTest 
-    {
-    public:
-        CodeGenTest() :
-            CompilerUnitTest()
-        {
+class CodeGenTest : public TRTest::CompilerUnitTest {
+public:
+    CodeGenTest() : CompilerUnitTest() {
         fakeNode = TR::Node::create(TR::treetop);
-        }
+    }
 
     TR::CodeGenerator* cg() { return _comp.cg(); }
-    };
 
-    private:
+private:
     TR::Node *fakeNode;
+};
 
 }
 

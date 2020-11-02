@@ -41,11 +41,9 @@
 
 namespace TRTest {
 
-class NullIlGenRequest : public TR::IlGenRequest 
-    {
+class NullIlGenRequest : public TR::IlGenRequest {
     TR::IlGeneratorMethodDetails _details;
-
-    public:
+public:
     NullIlGenRequest() : TR::IlGenRequest(_details) {}
 
     virtual TR_IlGenerator *getIlGenerator(
@@ -58,50 +56,47 @@ class NullIlGenRequest : public TR::IlGenRequest
     }
 
     virtual void print(TR_FrontEnd *fe, TR::FILE *file, const char *suffix) {}
-    };
 
-class JitInitializer 
-    {
-    public:
-    JitInitializer()
-        {
+    
+};
+
+class JitInitializer {
+public:
+    JitInitializer() {
         initializeJit();
-        }
+    }
 
-    ~JitInitializer() 
-        {
+    ~JitInitializer() {
         shutdownJit();
-        }
-    };
+    }
+};
 
 /**
  * A base class containing necessary mocking objects for testing compiler and optimizers.
  */
-class CompilerUnitTest : public ::testing::Test
-    {
-    public:
+class CompilerUnitTest : public ::testing::Test {
+public:
     CompilerUnitTest() :
-            _jitInit(),
-            _rawAllocator(),
-            _segmentProvider(1 << 16, _rawAllocator),
-            _dispatchRegion(_segmentProvider, _rawAllocator),
-            _trMemory(*OMR::FrontEnd::singleton().persistentMemory(), _dispatchRegion),
-            _types(),
-            _options(),
-            _ilGenRequest(),
-            _method("compunittest", "0", "test", 0, NULL, _types.NoType, NULL, NULL),
-            _comp(0, NULL, &OMR::FrontEnd::singleton(), &_method, _ilGenRequest, _options, _dispatchRegion, &_trMemory, TR_OptimizationPlan::alloc(warm))
-        {
+        _jitInit(),
+        _rawAllocator(),
+        _segmentProvider(1 << 16, _rawAllocator),
+        _dispatchRegion(_segmentProvider, _rawAllocator),
+        _trMemory(*OMR::FrontEnd::singleton().persistentMemory(), _dispatchRegion),
+        _types(),
+        _options(),
+        _ilGenRequest(),
+        _method("compunittest", "0", "test", 0, NULL, _types.NoType, NULL, NULL),
+        _comp(0, NULL, &OMR::FrontEnd::singleton(), &_method, _ilGenRequest, _options, _dispatchRegion, &_trMemory, TR_OptimizationPlan::alloc(warm)) {
         _symbol = TR::ResolvedMethodSymbol::create(_comp.trStackMemory(), &_method, &_comp);
         TR::CFG* cfg =  new (region()) TR::CFG(&_comp, _symbol, region());
         _symbol->setFlowGraph(cfg);
         _optimizer = new (region()) TR::Optimizer(&_comp, _symbol, false);
         _comp.setOptimizer(_optimizer);
-        }
+    }
 
     TR::Region& region() { return _dispatchRegion; }
 
-    protected:
+protected:
     JitInitializer _jitInit;
     TR::RawAllocator _rawAllocator;
     TR::SystemSegmentProvider _segmentProvider;
@@ -114,34 +109,30 @@ class CompilerUnitTest : public ::testing::Test
     TR::ResolvedMethod _method;
     TR::Compilation _comp;
     TR::Optimizer* _optimizer;
-    };
+};
 
 template <typename T>
-class MakeVector 
-    {
+class MakeVector {
     std::vector<T> _vals;
 
     void add_vals() {}
 
     template <typename... Ts>
-    void add_vals(T next_val, Ts... more_vals) 
-        {
+    void add_vals(T next_val, Ts... more_vals) {
         _vals.push_back(next_val);
         add_vals(more_vals...);
-        }
+    }
 
-    public:
+public:
     template <typename... Ts>
-    MakeVector(Ts... vals) 
-        {
+    MakeVector(Ts... vals) {
         add_vals(vals...);
-        }
+    }
 
-    const std::vector<T>& operator*() const 
-        {
+    const std::vector<T>& operator*() const {
         return _vals;
-        }
-    };
+    }
+};
 
 }
 #endif

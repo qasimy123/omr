@@ -30,66 +30,52 @@
 
 namespace TRTest {
 
-class AbsInterpreterTest : public TRTest::CompilerUnitTest
-   {
-   public:
-   AbsInterpreterTest() :
-         CompilerUnitTest()
-      {
-      _manager = new (_comp.allocator()) TR::OptimizationManager(_optimizer, TR::GlobalValuePropagation::create, OMR::globalValuePropagation);
-      _vp = static_cast<TR::GlobalValuePropagation*>(TR::GlobalValuePropagation::create(_manager));
-      _vp->initialize();
-      }
+class AbsInterpreterTest : public TRTest::CompilerUnitTest {
+public:
+    AbsInterpreterTest() : CompilerUnitTest() {
+        _manager = new (_comp.allocator()) TR::OptimizationManager(_optimizer, TR::GlobalValuePropagation::create, OMR::globalValuePropagation);
+        _vp = static_cast<TR::GlobalValuePropagation*>(TR::GlobalValuePropagation::create(_manager));
+        _vp->initialize();
+    }
 
    TR::ValuePropagation* vp() { return _vp; }
 
-   private:
+private:
    TR::OptimizationManager* _manager;
    TR::GlobalValuePropagation* _vp;
-   };
+};
 
-class AbsTestValue : public TR::AbsValue
-   {
-   public:
-   AbsTestValue(TR::DataType dataType, int32_t low, int32_t high) :
-         TR::AbsValue(dataType),
-         _low(low),
-         _high(high)
-   {}
+class AbsTestValue : public TR::AbsValue {
+public:
+    AbsTestValue(TR::DataType dataType, int32_t low, int32_t high) :TR::AbsValue(dataType), _low(low), _high(high) {}
 
-   int32_t getLow() const { return _low; }
-   int32_t getHigh() const { return _high; }
+    int32_t getLow() const { return _low; }
+    int32_t getHigh() const { return _high; }
 
-   virtual TR::AbsValue* clone(TR::Region& region) const
-      {
-      TRTest::AbsTestValue* copy = new (region) TRTest::AbsTestValue(_dataType, _paramPos, _low, _high);
-      return copy;
-      } 
+    virtual TR::AbsValue* clone(TR::Region& region) const {
+        TRTest::AbsTestValue* copy = new (region) TRTest::AbsTestValue(_dataType, _paramPos, _low, _high);
+        return copy;
+    } 
 
-   virtual bool isTop() const { return _low == INT_MIN && _high == INT_MAX; }
+    virtual bool isTop() const { return _low == INT_MIN && _high == INT_MAX; }
 
-   virtual void setToTop() { _low = INT_MIN; _high = INT_MAX;  }
+    virtual void setToTop() { _low = INT_MIN; _high = INT_MAX;  }
 
-   virtual TR::AbsValue* merge(const TR::AbsValue *other) 
-      { 
-      const TRTest::AbsTestValue* v = static_cast<const TRTest::AbsTestValue*>(other);
-      _low = v->getLow() < _low ?  v->getLow() : _low;
-      _high = v->getHigh() > _high ? v->getHigh() : _high;
-      return this;
-      }
+    virtual TR::AbsValue* merge(const TR::AbsValue *other) { 
+        const TRTest::AbsTestValue* v = static_cast<const TRTest::AbsTestValue*>(other);
+        _low = v->getLow() < _low ?  v->getLow() : _low;
+        _high = v->getHigh() > _high ? v->getHigh() : _high;
+        return this;
+    }
 
-   virtual void print(TR::Compilation* comp) const {} 
+    virtual void print(TR::Compilation* comp) const {} 
 
-   private:
-   AbsTestValue(TR::DataType dataType, int32_t paramPos, int32_t low, int32_t high) :
-         TR::AbsValue(dataType, paramPos),
-         _low(low),
-         _high(high)
-   {}
+private:
+    AbsTestValue(TR::DataType dataType, int32_t paramPos, int32_t low, int32_t high) : TR::AbsValue(dataType, paramPos), _low(low), _high(high) {}
 
-   int32_t _low;
-   int32_t _high;
-   };
+    int32_t _low;
+    int32_t _high;
+};
 }
 
 
