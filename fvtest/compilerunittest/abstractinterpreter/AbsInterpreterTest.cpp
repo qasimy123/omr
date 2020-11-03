@@ -296,7 +296,7 @@ TEST_F(AbsOpStackTest, testMergeOperation) {
 
     TRTest::AbsTestValue value1(TR::Int32, 0, 0);
     TRTest::AbsTestValue value2(TR::Int32, 3, 5);
-    TRTest::AbsTestValue value3(TR::Int32,INT_MIN,INT_MAX);
+    TRTest::AbsTestValue value3(TR::Int32, INT_MIN, INT_MAX);
 
     stack1.push(&value1);
     stack1.push(&value2);
@@ -399,7 +399,7 @@ TEST_F(AbsOpArrayTest, testMergeOperation) {
 
     TRTest::AbsTestValue value1(TR::Int32, 1, 1);
     TRTest::AbsTestValue value2(TR::Int32, 5, 8);
-    TRTest::AbsTestValue value3(TR::Int32,INT_MIN,INT_MAX);
+    TRTest::AbsTestValue value3(TR::Int32, INT_MIN, INT_MAX);
 
     array.set(0, &value1);
     array.set(1, &value2);
