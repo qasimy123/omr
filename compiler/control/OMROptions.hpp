@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2020 IBM Corp. and others
+ * Copyright (c) 2000, 2021 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -101,7 +101,7 @@ enum TR_CompilationOptions
    TR_MimicInterpreterFrameShape = 0x00008000,
 
    TR_TraceBC                    = 0x00010000,
-   // Available                  = 0x00020000,
+   TR_TraceBIIDTGen              = 0x00020000,
    TR_TraceTrees                 = 0x00040000,
    TR_TraceCG                    = 0x00080000,
    TR_TraceAliases               = 0x00100000,
