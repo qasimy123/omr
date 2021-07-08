@@ -41,16 +41,23 @@ void TR::IDT::print()
       return;
    
    // print header line
-   char header[1024];
-   const uint32_t candidates = getNumNodes() - 1;
-   sprintf(header,"#IDT: %d candidate methods inlinable into %s with a budget %d", 
-      candidates,
-      getRoot()->getName(comp()->trMemory()),
-      getRoot()->getBudget()
-   );
+   int headerSize = 1 + snprintf(NULL, 0, "#IDT: %d candidate methods inlinable into %s with a budget %d",
+                                 candidates,
+                                 getRoot()->getName(comp()->trMemory()),
+                                 getRoot()->getBudget()
+                                 );
+   char *header = (char*) comp()->trMemory()->allocateStackMemory(headerSize);
+   int headerLen = snprintf(header, headerSize, "#IDT: %d candidate methods inlinable into %s with a budget %d",
+                            candidates,
+                            getRoot()->getName(comp()->trMemory()),
+                            getRoot()->getBudget());
+   TR_ASSERT_FATAL(headerLen == headerSize -1, "Truncation in the header");
 
-   if (verboseInlining)
-      TR_VerboseLog::writeLineLocked(TR_Vlog_BI, header);
+   if (verboseInlining){
+      TR_VerboseLog::vlogAcquire();
+      TR_VerboseLog::writeLine(TR_Vlog_BI, "%s\n", header);
+      TR_VerboseLog::vlogRelease();
+   }
    if (traceBIIDTGen)
       traceMsg(comp(), "%s\n", header);
 
@@ -74,24 +81,41 @@ void TR::IDT::print()
       // skip root node
       if (index != -1) 
          {
-         char line[1024];
-         sprintf(line, "#IDT: #%d: #%d inlinable @%d -> bcsz=%d %s target %s, static benefit = %d, benefit = %llu, cost = %d, budget = %d, callratio = %f, rootcallratio = %f", 
-            index,
-            currentNode->getParentGloablIndex(),
-            currentNode->getByteCodeIndex(),
-            currentNode->getByteCodeSize(),
-            currentNode->getResolvedMethodSymbol()->signature(comp()->trMemory()),
-            currentNode->getName(comp()->trMemory()),
-            currentNode->getStaticBenefit(),
-            currentNode->getBenefit(),
-            currentNode->getCost(),
-            currentNode->getBudget(),
-            currentNode->getCallRatio(),
-            currentNode->getRootCallRatio()
-         );
-
-         if (verboseInlining)
-            TR_VerboseLog::writeLineLocked(TR_Vlog_BI, line);
+         int lineSize = 1 + snprintf(NULL, 0, "#IDT: #%d: #%d inlinable @%d -> bcsz=%d %s target %s, static benefit = %d, benefit = %ld, cost = %d, budget = %d, callratio = %f, rootcallratio = %f",
+                                     index,
+                                     currentNode->getParentGloablIndex(),
+                                     currentNode->getByteCodeIndex(),
+                                     currentNode->getByteCodeSize(),
+                                     currentNode->getResolvedMethodSymbol()->signature(comp()->trMemory()),
+                                     currentNode->getName(comp()->trMemory()),
+                                     currentNode->getStaticBenefit(),
+                                     currentNode->getBenefit(),
+                                     currentNode->getCost(),
+                                     currentNode->getBudget(),
+                                     currentNode->getCallRatio(),
+                                     currentNode->getRootCallRatio()
+                                     );
+         char *line = (char*) comp()->trMemory()->allocateStackMemory(lineSize);
+         int lineLen = snprintf(line, lineSize, "#IDT: #%d: #%d inlinable @%d -> bcsz=%d %s target %s, static benefit = %d, benefit = %ld, cost = %d, budget = %d, callratio = %f, rootcallratio = %f",
+                                index,
+                                currentNode->getParentGloablIndex(),
+                                currentNode->getByteCodeIndex(),
+                                currentNode->getByteCodeSize(),
+                                currentNode->getResolvedMethodSymbol()->signature(comp()->trMemory()),
+                                currentNode->getName(comp()->trMemory()),
+                                currentNode->getStaticBenefit(),
+                                currentNode->getBenefit(),
+                                currentNode->getCost(),
+                                currentNode->getBudget(),
+                                currentNode->getCallRatio(),
+                                currentNode->getRootCallRatio()
+                                );
+         TR_ASSERT_FATAL(lineLen = lineSize -1, "Truncation in log line");
+         if (verboseInlining){
+            TR_VerboseLog::vlogAcquire();
+            TR_VerboseLog::writeLine(TR_Vlog_BI, "%s\n", line);
+            TR_VerboseLog::vlogRelease();
+         }
 
          if (traceBIIDTGen) 
             traceMsg(comp(), "%s\n", line);
@@ -111,9 +135,7 @@ void TR::IDT::flattenIDT()
 
    // initialize nodes index array
    uint32_t numNodes = getNumNodes();
-   _indices = new (_region) TR::IDTNode *[numNodes];
-
-   memset(_indices, 0, sizeof(TR::IDTNode*) * numNodes);
+   _indices = new (_region) TR::IDTNode *[numNodes]();
 
    // add all the descendents of the root node to the indices array
    TR::deque<TR::IDTNode*, TR::Region&> idtNodeQueue(comp()->trMemory()->currentStackRegion());
@@ -140,6 +162,7 @@ TR::IDTNode *TR::IDT::getNodeByGlobalIndex(int32_t index)
    {
    TR_ASSERT_FATAL(_indices, "Call flattenIDT() first");
    TR_ASSERT_FATAL(index < getNextGlobalIDTNodeIndex(), "Index out of range!");
+   TR_ASSERT_FATAL(index >= -1, "Index too low!");
    return _indices[index + 1];
    }
 
@@ -163,7 +186,7 @@ TR::IDTNode* TR::IDTPreorderPriorityQueue::get(uint32_t index)
 
    if (index > idtSize - 1)
       return NULL;
-
+   TR_ASSERT_FATAL(index < idtSize, "IDTPreorderPriorityQueue::get index out of bound!");
    // not in entries yet. Update entries.
    while (_entries.size() <= index) 
       {
