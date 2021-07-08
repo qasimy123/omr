@@ -75,7 +75,8 @@ TR::IDTNode* TR::IDTNode::addChild(
    if (getNumChildren() == 1)
       {
       TR::IDTNode* onlyChild = getOnlyChild();
-      _children = new (region) TR::vector<TR::IDTNode*, TR::Region&>(region); 
+      _children = new (region) TR::vector<TR::IDTNode*, TR::Region&>(region);
+      TR_ASSERT_FATAL(!((uintptr_t)_children & SINGLE_CHILD_BIT), "Maligned memory address.\n");
       _children->push_back(onlyChild);
       }
                      
@@ -130,7 +131,7 @@ TR::IDTNode* TR::IDTNode::getChild(uint32_t index)
    return (*_children)[index];
    }
 
-uint64_t TR::IDTNode::getBenefit()
+double TR::IDTNode::getBenefit()
    {
    return _rootCallRatio  * (1 + _staticBenefit) * 10;
    }
@@ -148,7 +149,6 @@ TR::IDTNode* TR::IDTNode::findChildWithBytecodeIndex(uint32_t bcIndex)
       return onlyChild->getByteCodeIndex() == bcIndex ? onlyChild : NULL;
       }
    
-   TR::IDTNode* child = NULL;
    for (uint32_t i = 0; i < size; i ++)
       {
       if ((*_children)[i]->getByteCodeIndex() == bcIndex)
