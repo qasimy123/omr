@@ -39,7 +39,7 @@ void TR::IDT::print()
 
    if (!verboseInlining && !traceBIIDTGen)
       return;
-   
+   const uint32_t candidates = getNumNodes() - 1;
    // print header line
    int headerSize = 1 + snprintf(NULL, 0, "#IDT: %d candidate methods inlinable into %s with a budget %d",
                                  candidates,

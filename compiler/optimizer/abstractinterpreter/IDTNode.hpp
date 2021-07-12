@@ -76,7 +76,7 @@ class IDTNode
    int32_t getGlobalIndex() { return _idx; }
    int32_t getParentGloablIndex()  { return isRoot() ? -2 : getParent()->getGlobalIndex(); }
 
-   uint64_t getBenefit();
+   double getBenefit();
 
    uint32_t getStaticBenefit() { return _staticBenefit; };
 
