@@ -23,7 +23,7 @@
 
 TR::IDT::IDT(TR::Region& region, TR_CallTarget* callTarget, TR::ResolvedMethodSymbol* symbol, uint32_t budget, TR::Compilation* comp):
       _region(region),
-      _maxIdx(-1),
+      _nextIdx(-1),
       _comp(comp),
       _root(new (_region) IDTNode(getNextGlobalIDTNodeIndex(), callTarget, symbol, -1, 1, NULL, budget)),
       _indices(NULL),
@@ -39,6 +39,7 @@ void TR::IDT::print()
 
    if (!verboseInlining && !traceBIIDTGen)
       return;
+   TR_VerboseLog::vlogAcquire();
    const uint32_t candidates = getNumNodes() - 1;
    // print header line
    int headerSize = 1 + snprintf(NULL, 0, "#IDT: %d candidate methods inlinable into %s with a budget %d",
@@ -53,11 +54,8 @@ void TR::IDT::print()
                             getRoot()->getBudget());
    TR_ASSERT_FATAL(headerLen == headerSize -1, "Truncation in the header");
 
-   if (verboseInlining){
-      TR_VerboseLog::vlogAcquire();
-      TR_VerboseLog::writeLine(TR_Vlog_BI, "%s\n", header);
-      TR_VerboseLog::vlogRelease();
-   }
+   if (verboseInlining)
+      TR_VerboseLog::writeLine(TR_Vlog_BI, "%s", header);
    if (traceBIIDTGen)
       traceMsg(comp(), "%s\n", header);
 
@@ -111,21 +109,18 @@ void TR::IDT::print()
                                 currentNode->getRootCallRatio()
                                 );
          TR_ASSERT_FATAL(lineLen = lineSize -1, "Truncation in log line");
-         if (verboseInlining){
-            TR_VerboseLog::vlogAcquire();
-            TR_VerboseLog::writeLine(TR_Vlog_BI, "%s\n", line);
-            TR_VerboseLog::vlogRelease();
-         }
+         if (verboseInlining)
+            TR_VerboseLog::writeLine(TR_Vlog_BI, "%s", line);
 
          if (traceBIIDTGen) 
-            traceMsg(comp(), "%s\n", line);
+            traceMsg(comp(), "%s", line);
          }
          
       // process children
       for (uint32_t i = 0; i < currentNode->getNumChildren(); i ++)
          idtNodeQueue.push_back(currentNode->getChild(i));
       }
-         
+   TR_VerboseLog::vlogRelease();
    }
 
 void TR::IDT::flattenIDT()
@@ -178,15 +173,14 @@ TR::IDTNode* TR::IDTPreorderPriorityQueue::get(uint32_t index)
    {
    const size_t entriesSize = _entries.size();
 
+   const uint32_t idtSize = size();
+   TR_ASSERT_FATAL(index < idtSize, "IDTPreorderPriorityQueue::get index out of bound!");
    // already in entries
    if (entriesSize > index) 
       return _entries.at(index);
 
-   const uint32_t idtSize = size();
-
    if (index > idtSize - 1)
       return NULL;
-   TR_ASSERT_FATAL(index < idtSize, "IDTPreorderPriorityQueue::get index out of bound!");
    // not in entries yet. Update entries.
    while (_entries.size() <= index) 
       {
