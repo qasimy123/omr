@@ -55,20 +55,20 @@ class IDT
     *
     * @return the total number of node
     */
-   uint32_t getNumNodes() { return _maxIdx + 1; }
+   uint32_t getNumNodes() { return _nextIdx + 1; }
    
    /**
     * @brief Get the next avaible IDTNode index.
     *
     * @return the next index
     */
-   int32_t getNextGlobalIDTNodeIndex() { return _maxIdx; }
+   int32_t getNextGlobalIDTNodeIndex() { return _nextIdx; }
 
    /**
     * @brief Increase the next available IDTNode index by 1.
     * This should only be called when successfully adding an IDTNode to the IDT
     */
-   void increaseGlobalIDTNodeIndex()  { _maxIdx ++; }
+   void increaseGlobalIDTNodeIndex()  { _nextIdx ++; }
 
    /**
     * @brief Get the IDTNode using index.
@@ -90,7 +90,7 @@ class IDT
 
    TR::Compilation *_comp;
    TR::Region&  _region;
-   int32_t _maxIdx;
+   int32_t _nextIdx;
    uint32_t _totalCost;
    TR::IDTNode* _root;
    TR::IDTNode** _indices;
@@ -112,7 +112,8 @@ class IDTPreorderPriorityQueue
       bool operator()(TR::IDTNode *left, TR::IDTNode *right)
          {
          TR_ASSERT_FATAL(left && right, "Comparing against null");
-         return left->getCost() < right->getCost() || left->getBenefit() < right->getBenefit();
+         return left->getCost() < right->getCost()
+            || (left->getCost() == right->getCost() && left->getBenefit() < right->getBenefit());
          };
    };
 
