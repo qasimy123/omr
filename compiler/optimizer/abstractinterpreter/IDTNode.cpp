@@ -76,7 +76,7 @@ TR::IDTNode* TR::IDTNode::addChild(
       {
       TR::IDTNode* onlyChild = getOnlyChild();
       _children = new (region) TR::vector<TR::IDTNode*, TR::Region&>(region);
-      TR_ASSERT_FATAL(!((uintptr_t)_children & SINGLE_CHILD_BIT), "Maligned memory address.\n");
+      TR_ASSERT_FATAL(!((uintptr_t)_children & SINGLE_CHILD_BIT), "Misaligned memory address.\n");
       _children->push_back(onlyChild);
       }
                      
@@ -133,6 +133,8 @@ TR::IDTNode* TR::IDTNode::getChild(uint32_t index)
 
 double TR::IDTNode::getBenefit()
    {
+   // 1 is used to avoid multiplying with benefit of 0
+   // 10 is the equal weight for every benefit
    return _rootCallRatio  * (1 + _staticBenefit) * 10;
    }
 
@@ -167,6 +169,6 @@ TR::IDTNode* TR::IDTNode::getOnlyChild()
 
 void TR::IDTNode::setOnlyChild(TR::IDTNode* child)
    {
-   TR_ASSERT_FATAL(!((uintptr_t)child & SINGLE_CHILD_BIT), "Maligned memory address.\n");
+   TR_ASSERT_FATAL(!((uintptr_t)child & SINGLE_CHILD_BIT), "Misaligned memory address.\n");
    _children = (TR::vector<TR::IDTNode*, TR::Region&>*)((uintptr_t)child | SINGLE_CHILD_BIT);
    }
