@@ -120,15 +120,22 @@ bool TR::PotentialOptimizationVPPredicate::holdPartialOrderRelation(TR::VPConstr
       else 
          return false;
       }
-   else if (testConstraint->asClassType()) // partial relation for class types
+   else if (testConstraint->asClassType()) // testing for checkcast
+      {
+       if (valueConstraint->getClassType()->asResolvedClass())
+          return testConstraint->getClass() == valueConstraint->getClass();
+       else
+          return false;
+      }
+   else if (testConstraint->asClass()) // partial relation for instanceof
       {
       if (valueConstraint->isNonNullObject() && valueConstraint->getClass())
          {
          TR_YesNoMaybe yesNoMaybe = _vp->fe()->isInstanceOf(valueConstraint->getClass(), testConstraint->getClass(), valueConstraint->isFixedClass(), true);
 
-         if (yesNoMaybe != TR_maybe)
+         if (yesNoMaybe == TR_yes)
             return true;
-         else 
+         else if (yesNoMaybe == TR_no)
             return false;
          }
       else 

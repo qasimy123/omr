@@ -98,6 +98,9 @@ class IDT
 
 /**
  * Accessing IDTNode by the priority of its cost.
+ * The queue has overwrite the operator for comparing he IDTNodes
+ * The node has the larger cost will have the higher priority
+ * The queue breaks the tie by comparing the benefit
  */
 class IDTPreorderPriorityQueue
    {
