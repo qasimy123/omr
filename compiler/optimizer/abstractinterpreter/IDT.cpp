@@ -20,6 +20,7 @@
  *******************************************************************************/
 
 #include "optimizer/abstractinterpreter/IDT.hpp"
+#include "env/VerboseLog.hpp"
 
 TR::IDT::IDT(TR::Region& region, TR_CallTarget* callTarget, TR::ResolvedMethodSymbol* symbol, int32_t budget, TR::Compilation* comp):
       _region(region),

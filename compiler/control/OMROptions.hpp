@@ -315,7 +315,7 @@ enum TR_CompilationOptions
    TR_TraceRelocatableDataCG              = 0x00100000 + 7,
    // Available                           = 0x00200000 + 7,
    TR_TraceRelocatableDataDetailsCG       = 0x00400000 + 7,
-   TR_EnableBenefitInliner                = 0x00800000 + 7,
+   // Available                           = 0x00800000 + 7,
    TR_TurnOffSelectiveNoOptServerIfNoStartupHint = 0x01000000 + 7,
    TR_TraceDominators                     = 0x02000000 + 7,
    TR_EnableHCR                           = 0x04000000 + 7, // enable hot code replacement
@@ -330,7 +330,7 @@ enum TR_CompilationOptions
    TR_EnableLowerCompilationLimitsDecisionMaking
                                           = 0x00000020 + 8,
    TR_DisableDirectToJNI                  = 0x00000040 + 8,
-   // Available                           = 0x00000080 + 8,
+   TR_EnableBenefitInliner                = 0x00000080 + 8,
    TR_EmitExecutableELFFile               = 0x00000100 + 8,
    TR_JITServerFollowRemoteCompileWithLocalCompile = 0x00000200 + 8,
    TR_EnableClassChainValidationCaching   = 0x00000800 + 8,
@@ -348,8 +348,8 @@ enum TR_CompilationOptions
    TR_DisableDLTrecompilationPrevention   = 0x00800000 + 8,
    TR_TraceAbstractInterpretation         = 0x01000000 + 8,
    TR_DisablePeekAOTResolutions           = 0x02000000 + 8,
-   TR_TraceBIIDTGen                       = 0x04000000 + 8,
-   TR_TraceBIProposal                     = 0x08000000 + 8,
+   TR_UseFlattenedArrayElementRuntimeHelpers = 0x04000000 + 8,
+   TR_UseFlattenedFieldRuntimeHelpers     = 0x08000000 + 8,
    TR_DisableLiveRangeSplitter            = 0x10000000 + 8,
    TR_DisableHalfSlotSpills               = 0x20000000 + 8,
    TR_DisableMHInlineWithoutPeeking       = 0x40000000 + 8,
@@ -358,8 +358,8 @@ enum TR_CompilationOptions
 
    // Option word 9
    //
-   // Available                           = 0x00000020 + 9,
-   // Available                           = 0x00000040 + 9,
+   TR_TraceBIIDTGen                       = 0x00000020 + 9,
+   TR_TraceBIProposal                     = 0x00000040 + 9,
    TR_DisableTLHPrefetch                  = 0x00000080 + 9,
    TR_DisableJProfilerThread              = 0x00000100 + 9,
    TR_DisableIProfilerThread              = 0x00000200 + 9,
@@ -368,8 +368,8 @@ enum TR_CompilationOptions
    TR_DisableBDLLVersioning               = 0x00001000 + 9,
    TR_IProfilerPerformTimestampCheck      = 0x00002000 + 9,
    TR_VerboseInlineProfiling              = 0x00004000 + 9,
-   TR_TraceBIIDTGen                       = 0x04000000 + 8,
-   TR_TraceBIProposal                     = 0x00010000 + 9,
+   TR_DisableVectorAPIExpansion           = 0x00008000 + 9,
+   TR_TraceVectorAPIExpansion             = 0x00010000 + 9,
    TR_DisableIntegerCompareSimplification = 0x00020000 + 9,
    TR_DisableAutoSIMD                     = 0x00040000 + 9,
    TR_DisableStableAnnotations            = 0x00080000 + 9,

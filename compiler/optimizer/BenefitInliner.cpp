@@ -22,7 +22,7 @@
 #include "optimizer/BenefitInliner.hpp"
 #include "optimizer/abstractinterpreter/IDTBuilder.hpp"
 #include "il/Node.hpp"
-#include "il/OMRNode_inlines.hpp"
+#include "il/Node_inlines.hpp"
 #include <algorithm>
 
 

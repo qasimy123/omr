@@ -24,6 +24,7 @@
 #include "compile/Compilation.hpp"
 #include "env/Region.hpp"
 #include "infra/BitVector.hpp"
+#include "env/VerboseLog.hpp"
 
 TR::InliningProposal::InliningProposal(TR::Region& region, TR::IDT *idt):
    _cost(0),
