@@ -104,6 +104,12 @@ const char* TR::PotentialOptimizationPredicate::getName()
 
 bool TR::PotentialOptimizationVPPredicate::holdPartialOrderRelation(TR::VPConstraint* valueConstraint, TR::VPConstraint* testConstraint)  
    {
+   TR_ASSERT_FATAL(testConstraint->isClassObject() != TR_yes, "testConstraint is not a class Object");
+   TR_ASSERT_FATAL(testConstraint->getClass() != NULL, "testConstraint class is Null");
+   TR_ASSERT_FATAL(testConstraint->isNonNullObject(), "testConstraint is a Null");
+   TR_ASSERT_FATAL(testConstraint->getPreexistence() == NULL, "testConstraint already exists");
+   TR_ASSERT_FATAL(testConstraint->getArrayInfo() == NULL, "testConstraint Array Info is NUll");
+   TR_ASSERT_FATAL(testConstraint->getObjectLocation() == NULL, "testContraint object location is Null");
    if (testConstraint->asIntConstraint()) // partial relation for int constraint
       {
       if (testConstraint->getLowInt() <= valueConstraint->getLowInt() && testConstraint->getHighInt() >= valueConstraint->getHighInt()) 
@@ -123,9 +129,7 @@ bool TR::PotentialOptimizationVPPredicate::holdPartialOrderRelation(TR::VPConstr
    else if (testConstraint->asClassType()) // testing for checkcast
       {
        if (valueConstraint->getClassType()->asResolvedClass())
-          return testConstraint->getClass() == valueConstraint->getClass();
-       else
-          return false;
+         return !dynamic_cast<TR::VPConstraint*>(testConstraint);
       }
    else if (testConstraint->asClass()) // partial relation for instanceof
       {

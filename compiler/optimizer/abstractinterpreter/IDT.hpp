@@ -111,14 +111,14 @@ class IDTPreorderPriorityQueue
    TR::IDTNode* get(uint32_t index);
 
    private:
-   struct IDTNodeCompare {
+   typedef struct IDTNodeCompare {
       bool operator()(TR::IDTNode *left, TR::IDTNode *right)
          {
          TR_ASSERT_FATAL(left && right, "Comparing against null");
          return left->getCost() < right->getCost()
             || (left->getCost() == right->getCost() && left->getBenefit() < right->getBenefit());
-         };
-   };
+         }
+   }IDTNodeCompare;
 
    typedef TR::vector<IDTNode*, TR::Region&> IDTNodeVector;
    typedef std::priority_queue<IDTNode*, IDTNodeVector, IDTNodeCompare> IDTNodePriorityQueue;
