@@ -20,6 +20,7 @@
  *******************************************************************************/
 
 #include "optimizer/abstractinterpreter/IDT.hpp"
+#include "infra/String.hpp"
 
 TR::IDT::IDT(TR::Region& region, TR_CallTarget* callTarget, TR::ResolvedMethodSymbol* symbol, uint32_t budget, TR::Compilation* comp):
       _region(region),
@@ -41,25 +42,19 @@ void TR::IDT::print()
       return;
    const uint32_t candidates = getNumNodes() - 1;
    // print header line
-   int headerSize = 1 + snprintf(NULL, 0, "#IDT: %d candidate methods inlinable into %s with a budget %d",
-                                 candidates,
-                                 getRoot()->getName(comp()->trMemory()),
-                                 getRoot()->getBudget()
-                                 );
-   char *header = (char*) comp()->trMemory()->allocateStackMemory(headerSize);
-   int headerLen = snprintf(header, headerSize, "#IDT: %d candidate methods inlinable into %s with a budget %d",
-                            candidates,
-                            getRoot()->getName(comp()->trMemory()),
-                            getRoot()->getBudget());
-   TR_ASSERT_FATAL(headerLen == headerSize -1, "Truncation in the header");
+   TR::StringBuf line(comp()->trMemory()->currentStackRegion());
+   line.appendf("#IDT: %d candidate methods inlinable into %s with a budget %d\n",
+               candidates,
+               getRoot()->getName(comp()->trMemory()),
+               getRoot()->getBudget());
 
    if (verboseInlining)
       {
       TR_VerboseLog::vlogAcquire();
-      TR_VerboseLog::writeLine(TR_Vlog_BI, "%s", header);
+      TR_VerboseLog::writeLine(TR_Vlog_BI, "%s", line.text());
       }
    if (traceBIIDTGen)
-      traceMsg(comp(), "%s\n", header);
+      traceMsg(comp(), "%s\n", line.text());
 
    if (candidates <= 0) 
       {
@@ -72,7 +67,7 @@ void TR::IDT::print()
    TR::deque<TR::IDTNode*, TR::Region&> idtNodeQueue(comp()->trMemory()->currentStackRegion());
 
    idtNodeQueue.push_back(getRoot());
-
+   line.clear();
    while (!idtNodeQueue.empty())
       {
       TR::IDTNode* currentNode = idtNodeQueue.front();
@@ -83,41 +78,25 @@ void TR::IDT::print()
       // skip root node
       if (index != -1) 
          {
-         int lineSize = 1 + snprintf(NULL, 0, "#IDT: #%d: #%d inlinable @%d -> bcsz=%d %s target %s, static benefit = %d, benefit = %f, cost = %d, budget = %d, callratio = %f, rootcallratio = %f",
-                                     index,
-                                     currentNode->getParentGloablIndex(),
-                                     currentNode->getByteCodeIndex(),
-                                     currentNode->getByteCodeSize(),
-                                     currentNode->getResolvedMethodSymbol()->signature(comp()->trMemory()),
-                                     currentNode->getName(comp()->trMemory()),
-                                     currentNode->getStaticBenefit(),
-                                     currentNode->getBenefit(),
-                                     currentNode->getCost(),
-                                     currentNode->getBudget(),
-                                     currentNode->getCallRatio(),
-                                     currentNode->getRootCallRatio()
-                                     );
-         char *line = (char*) comp()->trMemory()->allocateStackMemory(lineSize);
-         int lineLen = snprintf(line, lineSize, "#IDT: #%d: #%d inlinable @%d -> bcsz=%d %s target %s, static benefit = %d, benefit = %f, cost = %d, budget = %d, callratio = %f, rootcallratio = %f",
-                                index,
-                                currentNode->getParentGloablIndex(),
-                                currentNode->getByteCodeIndex(),
-                                currentNode->getByteCodeSize(),
-                                currentNode->getResolvedMethodSymbol()->signature(comp()->trMemory()),
-                                currentNode->getName(comp()->trMemory()),
-                                currentNode->getStaticBenefit(),
-                                currentNode->getBenefit(),
-                                currentNode->getCost(),
-                                currentNode->getBudget(),
-                                currentNode->getCallRatio(),
-                                currentNode->getRootCallRatio()
-                                );
-         TR_ASSERT_FATAL(lineLen = lineSize -1, "Truncation in log line");
+         line.appendf("#IDT: #%d: #%d inlinable @%d -> bcsz=%d %s target %s, static benefit = %d, benefit = %f, cost = %d, budget = %d, callratio = %f, rootcallratio = %f\n",
+                     index,
+                     currentNode->getParentGlobalIndex(),
+                     currentNode->getByteCodeIndex(),
+                     currentNode->getByteCodeSize(),
+                     currentNode->getResolvedMethodSymbol()->signature(comp()->trMemory()),
+                     currentNode->getName(comp()->trMemory()),
+                     currentNode->getStaticBenefit(),
+                     currentNode->getBenefit(),
+                     currentNode->getCost(),
+                     currentNode->getBudget(),
+                     currentNode->getCallRatio(),
+                     currentNode->getRootCallRatio()
+                     );
          if (verboseInlining)
-            TR_VerboseLog::writeLine(TR_Vlog_BI, "%s", line);
+            TR_VerboseLog::writeLine(TR_Vlog_BI, "%s", line.text());
 
          if (traceBIIDTGen) 
-            traceMsg(comp(), "%s\n", line);
+            traceMsg(comp(), "%s\n", line.text());
          }
          
       // process children

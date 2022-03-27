@@ -111,7 +111,8 @@ class IDTPreorderPriorityQueue
    TR::IDTNode* get(uint32_t index);
 
    private:
-   struct IDTNodeCompare {
+   struct IDTNodeCompare 
+   {
       bool operator()(TR::IDTNode *left, TR::IDTNode *right)
          {
          TR_ASSERT_FATAL(left && right, "Comparing against null");

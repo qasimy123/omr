@@ -74,7 +74,7 @@ class IDTNode
    TR::IDTNode *getParent() { return _parent; }
 
    int32_t getGlobalIndex() { return _idx; }
-   int32_t getParentGloablIndex()  { return isRoot() ? -2 : getParent()->getGlobalIndex(); }
+   int32_t getParentGlobalIndex()  { return isRoot() ? -2 : getParent()->getGlobalIndex(); }
 
    double getBenefit();
 
