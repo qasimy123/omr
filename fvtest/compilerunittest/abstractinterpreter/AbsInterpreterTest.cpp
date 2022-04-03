@@ -25,7 +25,12 @@
 #include "optimizer/abstractinterpreter/AbsValue.hpp"
 #include "optimizer/abstractinterpreter/AbsOpArray.hpp"
 #include "optimizer/abstractinterpreter/AbsOpStack.hpp"
+#include "optimizer/abstractinterpreter/OMRIDTBuilder.hpp"
+#include "fvtest/tril/tril/ast.h"
+#include "fvtest/tril/tril/ilgen.hpp"
+#include "optimizer/BenefitInliner.cpp"
 
+#define ASSERT_NOTNULL(pointer) ASSERT_TRUE(NULL != (pointer))
 
 class AbsVPValueTest : public TRTest::AbsInterpreterTest {};
 
@@ -440,4 +445,35 @@ TEST_F(AbsOpArrayTest, testMergeOperation) {
     ASSERT_EQ(INT_MIN, v3->getLow());
     ASSERT_EQ(INT_MAX, v3->getHigh());
     ASSERT_TRUE(v3->isTop());
+}
+class QasimTest : public TRTest::AbsInterpreterTest {};
+TEST_F(QasimTest, testWeights)
+{
+    auto* inputTrees = "(method return=Int64 args=[Int32]  "
+                       " (block                            "
+                       "  (lreturn                         "
+                       "   (land                           "
+                       "    (lconst 0xFFFFFFFF00000000)    "
+                       "    (iu2l (iload parm=0))))))      ";
+
+    auto trees = parseString(inputTrees);
+    TR::TypeDictionary types;
+    auto Int32 = types.PrimitiveType(TR::Int32);
+    TR::IlType* argTypes[] = { Int32 };
+    Tril::GenericNodeConverter genericNodeConverter;
+    Tril::CallConverter callConverter(&genericNodeConverter);
+    Tril::TRLangBuilder injector(trees, &types, &callConverter);
+    
+    printTreesToStdErr(trees);
+    TR::ResolvedMethod compilee(__FILE__, LINETOSTR(__LINE__), "Return3InIL", sizeof(argTypes)/sizeof(TR::IlType*), argTypes, Int32, 0, &injector);
+    TR::IlGeneratorMethodDetails methodDetails(&compilee);
+    auto method = methodDetails.getResolvedMethod();
+    auto ms = _comp.createJittedMethodSymbol(method);
+    TR::Region& region = _comp.trMemory()->heapMemoryRegion();
+    auto s = TR::BenefitInlinerWrapper::create(_manager);
+    TR::BenefitInliner inliner(_optimizer,  s);
+    TR::IDTBuilder idtBuilder(ms,100, region, &_comp, &inliner);
+    idtBuilder.buildIDT();
+    // inliner.buildInliningDependencyTree();
+    
 }

@@ -40,7 +40,7 @@ public:
 
    TR::ValuePropagation* vp() { return _vp; }
 
-private:
+protected:
    TR::OptimizationManager* _manager;
    TR::GlobalValuePropagation* _vp;
 };
