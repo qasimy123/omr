@@ -102,10 +102,10 @@ class IDT
  * The node has the larger cost will have the higher priority
  * The queue breaks the tie by comparing the benefit
  */
-class IDTPreorderPriorityQueue
+class IDTPriorityQueue
    {
    public:
-   IDTPreorderPriorityQueue(TR::IDT* idt, TR::Region& region);
+   IDTPriorityQueue(TR::IDT* idt, TR::Region& region);
    uint32_t size() { return _idt->getNumNodes(); }
 
    TR::IDTNode* get(uint32_t index);

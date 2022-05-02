@@ -146,7 +146,7 @@ TR::IDTNode *TR::IDT::getNodeByGlobalIndex(int32_t index)
    return _indices[index + 1];
    }
 
-TR::IDTPreorderPriorityQueue::IDTPreorderPriorityQueue(TR::IDT* idt, TR::Region& region)  :
+TR::IDTPriorityQueue::IDTPriorityQueue(TR::IDT* idt, TR::Region& region)  :
       _entries(region),
       _idt(idt),
       _pQueue(IDTNodeCompare(), IDTNodeVector(region))
@@ -154,12 +154,12 @@ TR::IDTPreorderPriorityQueue::IDTPreorderPriorityQueue(TR::IDT* idt, TR::Region&
    _pQueue.push(idt->getRoot());
    }
 
-TR::IDTNode* TR::IDTPreorderPriorityQueue::get(uint32_t index)
+TR::IDTNode* TR::IDTPriorityQueue::get(uint32_t index)
    {
    const size_t entriesSize = _entries.size();
 
    const uint32_t idtSize = size();
-   TR_ASSERT_FATAL(index < idtSize, "IDTPreorderPriorityQueue::get index out of bound!");
+   TR_ASSERT_FATAL(index < idtSize, "IDTPriorityQueue::get index out of bound!");
    // already in entries
    if (entriesSize > index) 
       return _entries.at(index);
