@@ -43,7 +43,7 @@ void TR::IDT::print()
    const uint32_t candidates = getNumNodes() - 1;
    // print header line
    TR::StringBuf line(comp()->trMemory()->currentStackRegion());
-   line.appendf("#IDT: %d candidate methods inlinable into %s with a budget %d\n",
+   line.appendf("#IDT: %d candidate methods inlinable into %s with a budget %d",
                candidates,
                getRoot()->getName(comp()->trMemory()),
                getRoot()->getBudget());
@@ -67,7 +67,7 @@ void TR::IDT::print()
    TR::deque<TR::IDTNode*, TR::Region&> idtNodeQueue(comp()->trMemory()->currentStackRegion());
 
    idtNodeQueue.push_back(getRoot());
-   line.clear();
+
    while (!idtNodeQueue.empty())
       {
       TR::IDTNode* currentNode = idtNodeQueue.front();
@@ -78,7 +78,8 @@ void TR::IDT::print()
       // skip root node
       if (index != -1) 
          {
-         line.appendf("#IDT: #%d: #%d inlinable @%d -> bcsz=%d %s target %s, static benefit = %d, benefit = %f, cost = %d, budget = %d, callratio = %f, rootcallratio = %f\n",
+         line.clear();
+         line.appendf("#IDT: #%d: #%d inlinable @%d -> bcsz=%d %s target %s, static benefit = %d, benefit = %f, cost = %d, budget = %d, callratio = %f, rootcallratio = %f",
                      index,
                      currentNode->getParentGlobalIndex(),
                      currentNode->getByteCodeIndex(),

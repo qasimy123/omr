@@ -119,7 +119,7 @@ class IDTPreorderPriorityQueue
          return left->getCost() < right->getCost()
             || (left->getCost() == right->getCost() && left->getBenefit() < right->getBenefit());
          };
-   };
+   }
 
    typedef TR::vector<IDTNode*, TR::Region&> IDTNodeVector;
    typedef std::priority_queue<IDTNode*, IDTNodeVector, IDTNodeCompare> IDTNodePriorityQueue;
