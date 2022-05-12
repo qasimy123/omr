@@ -50,18 +50,14 @@ void TR::IDT::print()
 
    if (verboseInlining)
       {
-      TR_VerboseLog::vlogAcquire();
+      TR_VerboseLog::CriticalSection vlogLock(verboseInlining);
       TR_VerboseLog::writeLine(TR_Vlog_BI, "%s", line.text());
       }
    if (traceBIIDTGen)
       traceMsg(comp(), "%s\n", line.text());
 
-   if (candidates <= 0) 
-      {
-       if (verboseInlining)
-           TR_VerboseLog::vlogRelease();
+   if (candidates <= 0)
       return;
-      }
 
    // print the IDT nodes in BFS
    TR::deque<TR::IDTNode*, TR::Region&> idtNodeQueue(comp()->trMemory()->currentStackRegion());
@@ -104,9 +100,6 @@ void TR::IDT::print()
       for (uint32_t i = 0; i < currentNode->getNumChildren(); i ++)
          idtNodeQueue.push_back(currentNode->getChild(i));
       }
-   if (verboseInlining)
-       TR_VerboseLog::vlogRelease();
-   }
 
 void TR::IDT::flattenIDT()
    {
