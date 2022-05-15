@@ -104,12 +104,12 @@ const char* TR::PotentialOptimizationPredicate::getName()
 
 bool TR::PotentialOptimizationVPPredicate::holdPartialOrderRelation(TR::VPConstraint* valueConstraint, TR::VPConstraint* testConstraint)  
    {
-   TR_ASSERT_FATAL(testConstraint->isClassObject() != TR_yes, "testConstraint is not a class Object");
-   TR_ASSERT_FATAL(testConstraint->getClass() != NULL, "testConstraint class is Null");
-   TR_ASSERT_FATAL(testConstraint->isNonNullObject(), "testConstraint is a Null");
-   TR_ASSERT_FATAL(testConstraint->getPreexistence() == NULL, "testConstraint already exists");
-   TR_ASSERT_FATAL(testConstraint->getArrayInfo() == NULL, "testConstraint Array Info is NUll");
-   TR_ASSERT_FATAL(testConstraint->getObjectLocation() == NULL, "testContraint object location is Null");
+   TR_ASSERT_FATAL(testConstraint->isClassObject() != TR_yes, "testConstraint is a class Object");
+   TR_ASSERT_FATAL(testConstraint->getClass() != NULL, "testConstraint class unexpectedly admits null");
+   TR_ASSERT_FATAL(testConstraint->isNonNullObject(), "testConstraint unexpectedly admits null");
+   TR_ASSERT_FATAL(testConstraint->getPreexistence() == NULL, "testConstraint  has unexpected pre-existence info");
+   TR_ASSERT_FATAL(testConstraint->getArrayInfo() == NULL, "testConstraint has unexpected array info");
+   TR_ASSERT_FATAL(testConstraint->getObjectLocation() == NULL, "testContraint has an unexpected location");
    if (testConstraint->asIntConstraint()) // partial relation for int constraint
       {
       if (testConstraint->getLowInt() <= valueConstraint->getLowInt() && testConstraint->getHighInt() >= valueConstraint->getHighInt()) 
@@ -129,7 +129,18 @@ bool TR::PotentialOptimizationVPPredicate::holdPartialOrderRelation(TR::VPConstr
    else if (testConstraint->asClassType()) // testing for checkcast
       {
        if (valueConstraint->getClassType()->asResolvedClass())
-         return !dynamic_cast<TR::VPConstraint*>(testConstraint);
+         {
+#ifdef J9_PROJECT_SPECIFIC
+         TR_J9VMBase *fej9 = (TR_J9VMBase *)_fe;
+         if(_fe.isInstanceOf(valueConstraint->getClass(), testConstraint->getClass(), true, true, true) != TR_yes && 
+            _fe.isInstanceOf(testConstraint->getClass(),valueConstraint->getClass() , true, true, true) != TR_yes)
+            return false;
+         else
+            return true;
+
+#else
+         return false;
+         }
       }
    else if (testConstraint->asClass()) // partial relation for instanceof
       {
