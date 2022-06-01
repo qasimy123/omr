@@ -100,6 +100,7 @@ void TR::IDT::print()
       for (uint32_t i = 0; i < currentNode->getNumChildren(); i ++)
          idtNodeQueue.push_back(currentNode->getChild(i));
       }
+   }
 
 void TR::IDT::flattenIDT()
    {
